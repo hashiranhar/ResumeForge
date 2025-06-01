@@ -1,8 +1,15 @@
+"""
+PDF generation service for ResumeForge CV builder.
+Converts Markdown content to styled PDF using WeasyPrint.
+Simple approach that actually works.
+"""
+
 import markdown
 from weasyprint import HTML, CSS
 from io import BytesIO
 from typing import Dict, Any, Optional
 import logging
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -24,14 +31,17 @@ class PDFService:
             bytes: PDF file content
         """
         try:
-            # Convert markdown to HTML
-            html_content = self._markdown_to_html(markdown_content)
+            # Process special formatting markers (this now handles markdown conversion too)
+            html_content = self._process_special_formatting(markdown_content)
+            
+            # Wrap in complete HTML document
+            final_html = self._wrap_html(html_content)
             
             # Generate CSS based on settings
             css_styles = self._generate_css(settings or {})
             
             # Create PDF
-            html = HTML(string=html_content)
+            html = HTML(string=final_html)
             css = CSS(string=css_styles)
             
             # Generate PDF to bytes
@@ -44,27 +54,66 @@ class PDFService:
             logger.error(f"PDF generation failed: {str(e)}")
             raise Exception(f"Failed to generate PDF: {str(e)}")
     
-    def _markdown_to_html(self, markdown_content: str) -> str:
-        """Convert markdown content to HTML"""
-        if not markdown_content or markdown_content.strip() == "":
-            markdown_content = "# Your CV\n\nPlease add your CV content here."
+    def _process_special_formatting(self, content: str) -> str:
+        """Process special formatting markers after markdown conversion"""
+        if not content:
+            return ""
         
-        # Configure markdown with extensions
-        md = markdown.Markdown(extensions=[
-            'markdown.extensions.extra',
-            'markdown.extensions.codehilite',
-            'markdown.extensions.toc'
-        ])
+        # First convert markdown to HTML normally
+        md = markdown.Markdown(extensions=['markdown.extensions.extra'])
+        html_content = md.convert(content)
         
-        html_body = md.convert(markdown_content)
+        # Then process our special markers in the HTML
+        lines = html_content.split('\n')
+        processed_lines = []
         
-        # Wrap in complete HTML document
-        html_content = f"""
+        for line in lines:
+            # Check for CENTER marker
+            if '[CENTER]' in line:
+                clean_line = line.replace('[CENTER]', '').strip()
+                # If it's already wrapped in HTML tags, add class
+                if clean_line.strip().startswith('<'):
+                    # Add center class to existing HTML element
+                    clean_line = re.sub(r'<(\w+)([^>]*)>', r'<\1 class="center-text"\2>', clean_line, count=1)
+                    processed_lines.append(clean_line)
+                else:
+                    processed_lines.append(f'<div class="center-text">{clean_line}</div>')
+            # Check for DATE-RIGHT marker  
+            elif '[DATE:' in line:
+                # Extract date from [DATE: content]
+                date_match = re.search(r'\[DATE:\s*([^\]]+)\]', line)
+                if date_match:
+                    date_content = date_match.group(1).strip()
+                    clean_line = re.sub(r'\s*\[DATE:[^\]]+\]', '', line).strip()
+                    
+                    # Check if it's a header element
+                    if clean_line.startswith('<h'):
+                        # For headers, add the date as a span inside the header
+                        header_match = re.match(r'(<h\d[^>]*>)(.*?)(</h\d>)', clean_line)
+                        if header_match:
+                            opening_tag = header_match.group(1)
+                            header_content = header_match.group(2)
+                            closing_tag = header_match.group(3)
+                            processed_lines.append(f'{opening_tag}{header_content}<span class="header-date">{date_content}</span>{closing_tag}')
+                        else:
+                            processed_lines.append(clean_line)
+                    else:
+                        # For non-headers, use the flex layout
+                        processed_lines.append(f'<div class="date-line"><span class="content">{clean_line}</span><span class="date">{date_content}</span></div>')
+                else:
+                    processed_lines.append(line)
+            else:
+                processed_lines.append(line)
+        
+        return '\n'.join(processed_lines)
+    
+    def _wrap_html(self, html_body: str) -> str:
+        """Wrap processed HTML in complete document"""
+        return f"""
         <!DOCTYPE html>
         <html lang="en">
         <head>
             <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>CV</title>
         </head>
         <body>
@@ -72,8 +121,6 @@ class PDFService:
         </body>
         </html>
         """
-        
-        return html_content
     
     def _generate_css(self, settings: Dict[str, Any]) -> str:
         """Generate CSS styles based on user settings"""
@@ -207,54 +254,83 @@ class PDFService:
             text-decoration: none;
         }}
         
-        blockquote {{
-            margin: 8pt 0 8pt 20pt;
-            padding: 4pt 0 4pt 12pt;
-            border-left: 3pt solid {theme_colors['accent']};
-            font-style: italic;
-            color: {theme_colors['secondary']};
-        }}
-        
-        code {{
-            background-color: #f8f9fa;
-            border: 1pt solid #e9ecef;
-            padding: 1pt 3pt;
-            font-family: 'Courier New', monospace;
-            font-size: {config.get('fontSize', 11) - 1}pt;
-        }}
-        
-        pre {{
-            background-color: #f8f9fa;
-            border: 1pt solid #e9ecef;
-            padding: 8pt;
-            margin: 8pt 0;
-            font-family: 'Courier New', monospace;
-            font-size: {config.get('fontSize', 11) - 1}pt;
-            overflow-x: auto;
-        }}
-        
         hr {{
             border: none;
             border-top: 1pt solid {theme_colors['secondary']};
             margin: 16pt 0;
         }}
         
-        table {{
-            width: 100%;
-            border-collapse: collapse;
-            margin: 8pt 0;
+        /* Special formatting classes */
+        .center-text {{
+            text-align: center !important;
+            margin: 6pt 0;
         }}
         
-        th, td {{
-            border: 1pt solid {theme_colors['secondary']};
-            padding: 4pt 8pt;
-            text-align: left;
+        .date-line {{
+            position: relative;
+            margin: 6pt 0;
+            min-height: 1.2em;
         }}
         
-        th {{
-            background-color: {theme_colors['primary']};
-            color: white;
-            font-weight: bold;
+        .date-line .content {{
+            display: block;
+            padding-right: 120pt; /* Reserve space for date */
+        }}
+        
+        .date-line .date {{
+            position: absolute;
+            right: 0;
+            top: 0;
+            font-style: italic;
+            color: {theme_colors['secondary']};
+            font-size: {config.get('fontSize', 11) - 1}pt;
+            white-space: nowrap;
+            width: 110pt; /* Fixed width for dates */
+            text-align: right;
+        }}
+        
+        /* Header with dates - keep on same line */
+        .header-date {{
+            float: right;
+            font-style: italic;
+            color: {theme_colors['secondary']};
+            font-size: {config.get('fontSize', 11) - 1}pt;
+            font-weight: normal;
+            line-height: 1.2;
+        }}
+        
+        /* Ensure headers with dates don't break */
+        h1, h2, h3 {{
+            position: relative;
+            overflow: hidden;
+        }}
+        
+        h1 .header-date {{
+            position: absolute;
+            right: 0;
+            top: 0;
+            font-size: {config.get('fontSize', 11) + 2}pt;
+        }}
+        
+        h2 .header-date {{
+            position: absolute;
+            right: 0;
+            top: 0;
+            font-size: {config.get('fontSize', 11)}pt;
+        }}
+        
+        h3 .header-date {{
+            position: absolute;
+            right: 0;
+            top: 0;
+            font-size: {config.get('fontSize', 11) - 1}pt;
+        }}
+        
+        /* Clear floats */
+        .date-line:after {{
+            content: "";
+            display: table;
+            clear: both;
         }}
         """
         
