@@ -1,9 +1,3 @@
-"""
-PDF generation service for ResumeForge CV builder.
-Converts Markdown content to styled PDF using WeasyPrint.
-Simple approach that actually works.
-"""
-
 import markdown
 from weasyprint import HTML, CSS
 from io import BytesIO
@@ -356,5 +350,4 @@ class PDFService:
         }
         """
 
-# Create a singleton instance
 pdf_service = PDFService()
