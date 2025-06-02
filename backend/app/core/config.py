@@ -13,6 +13,6 @@ class Settings(BaseSettings):
     llm_temperature: float = 0.7
     
     class Config:
-        env_file = ".env"
+        env_file = "../.env"
 
 settings = Settings()
