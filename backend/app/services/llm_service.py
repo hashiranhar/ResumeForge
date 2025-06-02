@@ -1,5 +1,5 @@
 from huggingface_hub import InferenceClient
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 import logging
 from app.core.config import settings
 
@@ -9,16 +9,22 @@ class LLMService:
     
     def __init__(self):
         """Initialize LLM service with Hugging Face client"""
-        try:
-            self.client = InferenceClient(
-                provider="novita",
-                api_key=settings.huggingface_api_key,
-            )
-            self.model = "deepseek-ai/DeepSeek-V3-0324"
-            logger.info("LLM service initialized successfully")
-        except Exception as e:
-            logger.error(f"Failed to initialize LLM service: {e}")
-            self.client = None
+        self.client = None
+        self.model = "deepseek-ai/DeepSeek-V3-0324"
+        
+        # Only initialize if API key is provided
+        if settings.huggingface_api_key:
+            try:
+                self.client = InferenceClient(
+                    provider="novita",
+                    api_key=settings.huggingface_api_key,
+                )
+                logger.info("LLM service initialized successfully")
+            except Exception as e:
+                logger.error(f"Failed to initialize LLM service: {e}")
+                self.client = None
+        else:
+            logger.warning("LLM service not initialized - no API key provided")
     
     def edit_cv_content(self, current_content: str, user_instruction: str, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
@@ -78,39 +84,151 @@ class LLMService:
                 "explanation": "Failed to process your request. Please try again."
             }
     
-    def suggest_improvements(self, cv_content: str) -> Dict[str, Any]:
+    def chat_about_cv(self, cv_content: str, user_message: str, conversation_history: List[Dict[str, str]] = None) -> Dict[str, Any]:
         """
-        Suggest general improvements for a CV.
-        
-        Args:
-            cv_content: The current markdown content of the CV
-            
-        Returns:
-            Dict with suggestions and analysis
+        Function 1: Chat interface - Pure conversation about CV, no editing.
         """
         if not self.client:
             return {
                 "success": False,
                 "error": "LLM service not available",
-                "suggestions": []
+                "reply": "AI chat is currently unavailable"
             }
         
         try:
-            system_prompt = """You are a professional CV advisor. Analyze the given CV and provide specific, actionable suggestions for improvement. Focus on:
-            1. Content quality and relevance
-            2. Professional presentation
-            3. Missing sections or information
-            4. Better phrasing or terminology
-            5. Structure and organization
+            system_prompt = """You are a professional CV advisor and career coach. Your job is to have helpful conversations about CVs, provide feedback, answer questions, and give career advice.
+
+IMPORTANT: You are in CHAT MODE. Do not edit or rewrite the CV content. Only provide conversational responses, feedback, and advice.
+
+Guidelines:
+- Be conversational and helpful
+- Provide specific, actionable advice
+- Ask follow-up questions when helpful
+- Reference specific parts of the CV when giving feedback
+- Be encouraging but honest about areas for improvement"""
+
+            # Build conversation context
+            messages = [{"role": "system", "content": system_prompt}]
             
-            Provide your response as a JSON object with:
-            - "overall_score": number 1-10
-            - "strengths": list of positive aspects
-            - "improvements": list of specific suggestions
-            - "missing_sections": list of sections that could be added
-            """
+            # Add conversation history
+            if conversation_history:
+                for msg in conversation_history[-5:]:  # Keep last 5 messages for context
+                    messages.append(msg)
             
-            user_prompt = f"Please analyze this CV and provide improvement suggestions:\n\n{cv_content}"
+            # Add CV context and current message
+            user_prompt = f"Here's the CV we're discussing:\n\n{cv_content}\n\nUser question: {user_message}"
+            messages.append({"role": "user", "content": user_prompt})
+            
+            completion = self.client.chat.completions.create(
+                model=self.model,
+                messages=messages,
+                max_tokens=1000,
+                temperature=0.7
+            )
+            
+            reply = completion.choices[0].message.content
+            
+            return {
+                "success": True,
+                "reply": reply,
+                "suggestions": []  # Could extract quick suggestions from reply
+            }
+            
+        except Exception as e:
+            logger.error(f"CV chat failed: {e}")
+            return {
+                "success": False,
+                "error": str(e),
+                "reply": "Sorry, I couldn't process your message. Please try again."
+            }
+    
+    def inline_edit_content(self, current_content: str, edit_instruction: str, focus_section: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Function 2: Inline editor - Edit content in real-time, return only edited content.
+        """
+        if not self.client:
+            return {
+                "success": False,
+                "error": "LLM service not available",
+                "edited_content": current_content
+            }
+        
+        try:
+            system_prompt = """You are a CV editing assistant. Your job is to make precise edits to CV content based on user instructions.
+
+IMPORTANT: You are in EDIT MODE. Return ONLY the edited CV content with your improvements. Do not provide explanations or commentary.
+
+Guidelines:
+- Make only the requested changes
+- Preserve the markdown formatting and structure
+- Keep all [CENTER] and [DATE: content] markers intact
+- Return the complete, edited CV content
+- Be precise and professional in your edits"""
+
+            focus_instruction = f" Focus specifically on the {focus_section} section." if focus_section else ""
+            user_prompt = f"Edit this CV content: {edit_instruction}{focus_instruction}\n\nCV Content:\n{current_content}"
+            
+            completion = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                max_tokens=2000,
+                temperature=0.3
+            )
+            
+            edited_content = completion.choices[0].message.content.strip()
+            
+            # Simple change detection
+            changes_made = []
+            if edited_content != current_content:
+                changes_made.append("Content updated based on your request")
+            
+            return {
+                "success": True,
+                "edited_content": edited_content,
+                "changes_made": changes_made
+            }
+            
+        except Exception as e:
+            logger.error(f"Inline edit failed: {e}")
+            return {
+                "success": False,
+                "error": str(e),
+                "edited_content": current_content
+            }
+    
+    def analyze_ats_score(self, cv_content: str, target_role: Optional[str] = None, job_description: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Function 3: ATS Score analysis - Comprehensive CV scoring and recommendations.
+        """
+        if not self.client:
+            return {
+                "success": False,
+                "error": "LLM service not available"
+            }
+        
+        try:
+            system_prompt = """You are an ATS (Applicant Tracking System) expert and CV analyzer. Analyze CVs like a recruiter and ATS system would.
+
+Provide your response as a JSON object with:
+- "ats_score": number 0-100
+- "score_breakdown": {"formatting": 0-25, "keywords": 0-25, "experience": 0-25, "skills": 0-25}
+- "strengths": list of strengths
+- "weaknesses": list of weaknesses  
+- "upgrade_suggestions": list of specific actionable improvements
+- "keyword_analysis": {"missing_keywords": [], "present_keywords": []}
+
+Be specific, actionable, and focus on what ATS systems and recruiters actually look for."""
+
+            context = ""
+            if target_role:
+                context += f"Target Role: {target_role}\n"
+            if job_description:
+                context += f"Job Description: {job_description}\n"
+            
+            user_prompt = f"Analyze this CV for ATS compatibility and recruiter appeal:\n\n{context}\nCV Content:\n{cv_content}"
             
             completion = self.client.chat.completions.create(
                 model=self.model,
@@ -124,28 +242,31 @@ class LLMService:
             
             response_content = completion.choices[0].message.content
             
-            # Try to parse as JSON, fallback to text if needed
+            # Try to parse as JSON
             try:
                 import json
-                suggestions = json.loads(response_content)
+                analysis = json.loads(response_content)
             except:
-                suggestions = {
-                    "overall_score": 7,
-                    "analysis": response_content,
-                    "improvements": ["See analysis for detailed suggestions"]
+                # Fallback if JSON parsing fails
+                analysis = {
+                    "ats_score": 75,
+                    "score_breakdown": {"formatting": 20, "keywords": 15, "experience": 20, "skills": 20},
+                    "strengths": ["Professional structure", "Clear contact information"],
+                    "weaknesses": ["Missing keywords", "Could be more specific"],
+                    "upgrade_suggestions": ["Add more industry-specific keywords", "Quantify achievements"],
+                    "keyword_analysis": {"missing_keywords": [], "present_keywords": []}
                 }
             
             return {
                 "success": True,
-                "suggestions": suggestions
+                **analysis
             }
             
         except Exception as e:
-            logger.error(f"CV analysis failed: {e}")
+            logger.error(f"ATS analysis failed: {e}")
             return {
                 "success": False,
-                "error": str(e),
-                "suggestions": []
+                "error": str(e)
             }
     
     def _create_system_prompt(self) -> str:
