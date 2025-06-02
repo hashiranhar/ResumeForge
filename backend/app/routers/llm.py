@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import Optional
 from app.database import get_db
-from app.schemas.llm import LLMEditRequest, LLMEditResponse, LLMSuggestionsRequest, LLMSuggestionsResponse, QuickEditRequest
+from app.schemas.llm import ChatRequest, ChatResponse, InlineEditRequest, InlineEditResponse, ATSAnalysisRequest, ATSAnalysisResponse
 from app.schemas.auth import UserResponse
 from app.crud.cv import get_cv_by_id, update_cv
 from app.routers.auth import get_current_user
@@ -12,93 +12,19 @@ import logging
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/llm", tags=["llm"])
 
-@router.post("/edit", response_model=LLMEditResponse)
-def edit_cv_with_llm(
-    request: LLMEditRequest,
+@router.post("/chat", response_model=ChatResponse)
+def chat_about_cv(
+    request: ChatRequest,
     current_user: UserResponse = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
+    """
+    Function 1: Chatbot interface - User talks to LLM about their CV.
+    Returns only conversational response, no content edits.
+    """
     try:
-        # Get current CV content
-        current_content = ""
-        cv_context = {}
-        
-        if request.cv_id:
-            # Get existing CV
-            cv = get_cv_by_id(db, str(request.cv_id), str(current_user.id))
-            if not cv:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail="CV not found"
-                )
-            current_content = cv.markdown_content or ""
-            cv_context = {
-                "cv_name": cv.name,
-                "target_role": request.target_role
-            }
-        else:
-            # Use provided content
-            current_content = request.current_content or ""
-            cv_context = {"target_role": request.target_role}
-        
-        if not current_content.strip():
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="No CV content provided to edit"
-            )
-        
-        # Call LLM service
-        result = llm_service.edit_cv_content(
-            current_content=current_content,
-            user_instruction=request.instruction,
-            context=cv_context
-        )
-        
-        if not result["success"]:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=result.get("error", "AI editing failed")
-            )
-        
-        # Optionally update the CV in database
-        updated_cv = None
-        if request.cv_id and request.save_changes:
-            updated_cv = update_cv(
-                db=db,
-                cv_id=str(request.cv_id),
-                user_id=str(current_user.id),
-                markdown_content=result["edited_content"]
-            )
-            if not updated_cv:
-                logger.warning(f"Failed to save LLM edits to CV {request.cv_id}")
-        
-        return LLMEditResponse(
-            success=True,
-            edited_content=result["edited_content"],
-            explanation=result["explanation"],
-            suggestions=result.get("suggestions", []),
-            cv_updated=updated_cv is not None
-        )
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"LLM edit endpoint failed: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to process AI editing request"
-        )
-
-@router.post("/suggestions", response_model=LLMSuggestionsResponse)
-def get_cv_suggestions(
-    request: LLMSuggestionsRequest,
-    current_user: UserResponse = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    try:
-        # Get CV content
+        # Get CV content for context
         cv_content = ""
-        
         if request.cv_id:
             cv = get_cv_by_id(db, str(request.cv_id), str(current_user.id))
             if not cv:
@@ -108,43 +34,46 @@ def get_cv_suggestions(
                 )
             cv_content = cv.markdown_content or ""
         else:
-            cv_content = request.content or ""
+            cv_content = request.cv_content or ""
         
-        if not cv_content.strip():
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="No CV content provided for analysis"
-            )
-        
-        # Get suggestions from LLM
-        result = llm_service.suggest_improvements(cv_content)
+        # Call LLM service for chat response
+        result = llm_service.chat_about_cv(
+            cv_content=cv_content,
+            user_message=request.message,
+            conversation_history=request.conversation_history or []
+        )
         
         if not result["success"]:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=result.get("error", "Failed to analyze CV")
+                detail=result.get("error", "Chat failed")
             )
         
-        return LLMSuggestionsResponse(
+        return ChatResponse(
             success=True,
-            suggestions=result["suggestions"]
+            reply=result["reply"],
+            suggestions=result.get("suggestions", [])
         )
         
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"LLM suggestions endpoint failed: {e}")
+        logger.error(f"Chat endpoint failed: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to generate CV suggestions"
+            detail="Failed to process chat message"
         )
 
-@router.post("/quick-edit")
-def quick_edit_cv_section(
-    request: QuickEditRequest,
+@router.post("/inline-edit", response_model=InlineEditResponse)
+def inline_edit_cv(
+    request: InlineEditRequest,
     current_user: UserResponse = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
+    """
+    Function 2: Inline editor - User asks for changes, LLM edits markdown in real-time.
+    Returns only the edited content, no explanations.
+    """
     try:
         # Get CV
         cv = get_cv_by_id(db, str(request.cv_id), str(current_user.id))
@@ -154,31 +83,102 @@ def quick_edit_cv_section(
                 detail="CV not found"
             )
         
-        # Create targeted instruction
-        targeted_instruction = f"Focus only on the {request.section} section and {request.instruction}"
-        
-        # Call LLM service
-        result = llm_service.edit_cv_content(
+        # Call LLM service for inline editing
+        result = llm_service.inline_edit_content(
             current_content=cv.markdown_content or "",
-            user_instruction=targeted_instruction,
-            context={"cv_name": cv.name, "focus_section": request.section}
+            edit_instruction=request.instruction,
+            focus_section=request.section
         )
         
         if not result["success"]:
-            return {"success": False, "error": result.get("error", "Quick edit failed")}
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=result.get("error", "Inline edit failed")
+            )
         
-        return {
-            "success": True,
-            "edited_content": result["edited_content"],
-            "explanation": result["explanation"],
-            "section_focused": request.section
-        }
+        # Auto-save if requested
+        updated_cv = None
+        if request.auto_save:
+            updated_cv = update_cv(
+                db=db,
+                cv_id=str(request.cv_id),
+                user_id=str(current_user.id),
+                markdown_content=result["edited_content"]
+            )
+        
+        return InlineEditResponse(
+            success=True,
+            edited_content=result["edited_content"],
+            changes_made=result.get("changes_made", []),
+            auto_saved=updated_cv is not None
+        )
         
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Quick edit failed: {e}")
+        logger.error(f"Inline edit endpoint failed: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to perform quick edit"
+            detail="Failed to perform inline edit"
+        )
+
+@router.post("/ats-score", response_model=ATSAnalysisResponse)
+def get_ats_score(
+    request: ATSAnalysisRequest,
+    current_user: UserResponse = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Function 3: ATS Score Button - Analyzes CV and provides ATS score + upgrade suggestions.
+    """
+    try:
+        # Get CV content
+        cv_content = ""
+        if request.cv_id:
+            cv = get_cv_by_id(db, str(request.cv_id), str(current_user.id))
+            if not cv:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="CV not found"
+                )
+            cv_content = cv.markdown_content or ""
+        else:
+            cv_content = request.cv_content or ""
+        
+        if not cv_content.strip():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No CV content provided for ATS analysis"
+            )
+        
+        # Call LLM service for ATS analysis
+        result = llm_service.analyze_ats_score(
+            cv_content=cv_content,
+            target_role=request.target_role,
+            job_description=request.job_description
+        )
+        
+        if not result["success"]:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=result.get("error", "ATS analysis failed")
+            )
+        
+        return ATSAnalysisResponse(
+            success=True,
+            ats_score=result["ats_score"],
+            score_breakdown=result["score_breakdown"],
+            strengths=result["strengths"],
+            weaknesses=result["weaknesses"],
+            upgrade_suggestions=result["upgrade_suggestions"],
+            keyword_analysis=result.get("keyword_analysis", {})
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"ATS analysis endpoint failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to perform ATS analysis"
         )
