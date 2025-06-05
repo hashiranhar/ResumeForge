@@ -5,7 +5,7 @@ import { authenticatedFetch } from './auth.js';
 export const cvs = writable([]);
 export const currentCV = writable({
     id: null,
-    name: '',
+    name: null,
     markdown_content: '',
     settings: {
         font: 'Arial',
@@ -160,6 +160,13 @@ export const cvService = {
 
     // Update CV
     async updateCV(cvId, name, content, settings) {
+        // Validate CV ID before making request
+        if (!cvId || cvId === 'null' || cvId === 'undefined' || cvId === null) {
+            return {
+                success: false,
+                error: 'Invalid CV ID - cannot update unsaved CV'
+            };
+        }
         isLoading.set(true);
         error.set(null);
         
@@ -303,7 +310,12 @@ export const cvService = {
 
     // Auto-save functionality
     async autoSave(cvId, content, settings) {
-        if (!cvId) return { success: false };
+        if (!cvId || cvId === 'null' || cvId === 'undefined' || cvId === null) {
+            return { 
+                success: false, 
+                error: 'Cannot auto-save: No valid CV ID' 
+            };
+        }
         
         try {
             const response = await authenticatedFetch(`/api/cvs/${cvId}`, {

@@ -159,7 +159,13 @@ Experienced software engineer with 5+ years of expertise in full-stack developme
     }
 
     async function saveCurrentCV() {
-        if (!$currentCV) return;
+    // ADD VALIDATION HERE
+        if (!$currentCV || !$currentCV.id) {
+            // For new CVs, show the name modal instead
+            newCVName = $draftCV.name || 'My CV';
+            showSaveModal = true;
+            return;
+        }
 
         saving = true;
 
