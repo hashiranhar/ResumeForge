@@ -23,7 +23,7 @@
     }
 
     function handleNewCV() {
-        goto('/editor?new=true');
+        goto('/dashboard');
     }
 
     function handleClickOutside(event) {
@@ -36,9 +36,10 @@
 <svelte:window on:click={handleClickOutside} />
 
 <header class="bg-white dark:bg-black shadow-sm border-b border-gray-200 dark:border-gray-800">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <!-- FIXED: Removed max-w-7xl mx-auto to make items stick to screen edges -->
+    <div class="px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between items-center h-16">
-            <!-- Logo -->
+            <!-- LEFT SIDE - Logo (sticks to left edge) -->
             <div class="flex items-center">
                 <a href="/" class="flex items-center space-x-2">
                     <FileText class="h-8 w-8 text-primary-600 dark:text-primary-400" />
@@ -46,7 +47,7 @@
                 </a>
             </div>
 
-            <!-- Navigation -->
+            <!-- RIGHT SIDE - Navigation (sticks to right edge) -->
             <div class="flex items-center space-x-4">
                 {#if $isAuthenticated}
                     <!-- New CV button -->
@@ -78,11 +79,11 @@
                             <div class="w-8 h-8 bg-primary-100 dark:bg-gray-700 rounded-full flex items-center justify-center">
                                 <User class="h-5 w-5 text-primary-600 dark:text-primary-400" />
                             </div>
-                            <span class="text-sm font-medium">{$user?.email}</span>
+                            <span class="text-sm font-medium hidden md:block">{$user?.email}</span>
                         </button>
 
                         {#if showUserMenu}
-                            <div class="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-900 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-10">
+                            <div class="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-900 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-50">
                                 <div class="py-1">
                                     <div class="px-4 py-2 text-sm text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">
                                         Signed in as<br />
@@ -108,11 +109,12 @@
                         {/if}
                     </div>
                 {:else}
-                    <!-- Dark Mode Toggle -->
-                    <DarkModeToggle />
-                    
-                    <!-- Auth buttons -->
-                    <div class="flex items-center space-x-2">
+                    <!-- Auth buttons for non-authenticated users -->
+                    <div class="flex items-center space-x-3">
+                        <!-- Dark Mode Toggle -->
+                        <DarkModeToggle />
+                        
+                        <!-- Auth buttons -->
                         <Button variant="outline" size="sm" href="/auth/login">
                             Sign In
                         </Button>
