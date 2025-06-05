@@ -1,49 +1,16 @@
-<!doctype html>
-<html lang="en" data-theme="light">
+<!DOCTYPE html>
+<html lang="en">
 	<head>
 		<meta charset="utf-8" />
 		<link rel="icon" href="%sveltekit.assets%/favicon.png" />
-		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="viewport" content="width=device-width" />
+		<link rel="preconnect" href="https://fonts.googleapis.com">
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+		<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+		<title>ResumeForge - Professional CV Builder</title>
 		%sveltekit.head%
-		<style>
-			/* Theme Variables */
-			:root[data-theme="light"] {
-				--bg-primary: #ffffff;
-				--bg-secondary: #f8fafc;
-				--bg-tertiary: #f1f5f9;
-				--text-primary: #1e293b;
-				--text-secondary: #64748b;
-				--border: #e2e8f0;
-				--accent: #3b82f6;
-				--accent-hover: #2563eb;
-			}
-			
-			:root[data-theme="dark"] {
-				--bg-primary: #0f172a;
-				--bg-secondary: #1e293b;
-				--bg-tertiary: #334155;
-				--text-primary: #f1f5f9;
-				--text-secondary: #94a3b8;
-				--border: #334155;
-				--accent: #60a5fa;
-				--accent-hover: #3b82f6;
-			}
-			
-			/* Global Styles */
-			* {
-				box-sizing: border-box;
-			}
-			
-			body {
-				margin: 0;
-				background-color: var(--bg-primary);
-				color: var(--text-primary);
-				font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-				transition: background-color 0.2s, color 0.2s;
-			}
-		</style>
 	</head>
-	<body data-sveltekit-preload-data="hover">
+	<body data-sveltekit-preload-data="hover" class="bg-gray-50">
 		<div style="display: contents">%sveltekit.body%</div>
 	</body>
 </html>
