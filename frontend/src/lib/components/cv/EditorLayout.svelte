@@ -88,19 +88,19 @@
     }
 </script>
 
-<div class="flex flex-col h-full">
-    <!-- Toolbar -->
-    <div class="bg-white border-b border-gray-200 px-4 py-3">
+<div class="flex flex-col h-full bg-white dark:bg-black">
+    <!-- Toolbar - FIXED: Added dark mode styling -->
+    <div class="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-4 py-3">
         <div class="flex items-center justify-between">
             <div class="flex items-center space-x-4">
                 <!-- CV Title -->
-                <h1 class="text-lg font-semibold text-gray-900">
+                <h1 class="text-lg font-semibold text-gray-900 dark:text-white">
                     {$draftCV.name || 'Untitled CV'}
                     {#if $hasUnsavedChanges && !isDemo}
                         <span class="text-orange-500 ml-2">•</span>
                     {/if}
                     {#if isDemo}
-                        <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded ml-2">
+                        <span class="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs px-2 py-1 rounded ml-2">
                             DEMO
                         </span>
                     {/if}
@@ -108,7 +108,7 @@
 
                 <!-- Save Status -->
                 {#if !isDemo}
-                    <span class="text-sm text-gray-500">
+                    <span class="text-sm text-gray-500 dark:text-gray-400">
                         {#if saving}
                             Saving...
                         {:else if $hasUnsavedChanges}
@@ -137,7 +137,7 @@
                     size="sm" 
                     variant="outline" 
                     on:click={() => showSettings = !showSettings}
-                    class={showSettings ? 'bg-gray-100' : ''}
+                    class={showSettings ? 'bg-gray-100 dark:bg-gray-700' : ''}
                 >
                     <Settings class="h-4 w-4" />
                 </Button>
@@ -153,16 +153,16 @@
 
     <!-- Main Content -->
     <div class="flex-1 flex overflow-hidden" bind:this={splitContainer}>
-        <!-- Left Panel -->
+        <!-- Left Panel - FIXED: Added dark mode styling -->
         <div 
-            class="flex flex-col bg-white border-r border-gray-200 overflow-hidden"
+            class="flex flex-col bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 overflow-hidden"
             style="width: {leftPanelWidth}%"
         >
-            <!-- Tab Navigation -->
-            <div class="border-b border-gray-200">
+            <!-- Tab Navigation - FIXED: Added dark mode styling -->
+            <div class="border-b border-gray-200 dark:border-gray-700">
                 <nav class="flex space-x-0">
                     <button
-                        class="flex-1 px-4 py-3 text-sm font-medium border-r border-gray-200 transition-colors {activeTab === 'editor' ? 'bg-primary-50 text-primary-700 border-b-2 border-primary-600' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'}"
+                        class="flex-1 px-4 py-3 text-sm font-medium border-r border-gray-200 dark:border-gray-700 transition-colors {activeTab === 'editor' ? 'bg-primary-50 dark:bg-primary-900 text-primary-700 dark:text-primary-300 border-b-2 border-primary-600 dark:border-primary-400' : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-800'}"
                         on:click={() => activeTab = 'editor'}
                     >
                         <Edit3 class="h-4 w-4 inline mr-2" />
@@ -171,7 +171,7 @@
                     
                     {#if !isDemo}
                         <button
-                            class="flex-1 px-4 py-3 text-sm font-medium border-r border-gray-200 transition-colors {activeTab === 'chat' ? 'bg-primary-50 text-primary-700 border-b-2 border-primary-600' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'}"
+                            class="flex-1 px-4 py-3 text-sm font-medium border-r border-gray-200 dark:border-gray-700 transition-colors {activeTab === 'chat' ? 'bg-primary-50 dark:bg-primary-900 text-primary-700 dark:text-primary-300 border-b-2 border-primary-600 dark:border-primary-400' : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-800'}"
                             on:click={() => activeTab = 'chat'}
                         >
                             <MessageSquare class="h-4 w-4 inline mr-2" />
@@ -179,7 +179,7 @@
                         </button>
                         
                         <button
-                            class="flex-1 px-4 py-3 text-sm font-medium transition-colors {activeTab === 'ats' ? 'bg-primary-50 text-primary-700 border-b-2 border-primary-600' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'}"
+                            class="flex-1 px-4 py-3 text-sm font-medium transition-colors {activeTab === 'ats' ? 'bg-primary-50 dark:bg-primary-900 text-primary-700 dark:text-primary-300 border-b-2 border-primary-600 dark:border-primary-400' : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-800'}"
                             on:click={() => activeTab = 'ats'}
                         >
                             <Zap class="h-4 w-4 inline mr-2" />
@@ -201,12 +201,13 @@
             </div>
         </div>
 
-        <!-- Split Handle -->
+        <!-- Split Handle - FIXED: Added dark mode styling -->
         <div 
-            class="split-handle bg-gray-200 hover:bg-gray-300 cursor-col-resize w-1 relative group"
+            class="split-handle bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 cursor-col-resize w-1 relative group"
             class:bg-primary-300={isDragging}
+            class:dark:bg-primary-600={isDragging}
         >
-            <div class="absolute inset-y-0 -left-1 -right-1 group-hover:bg-gray-300 group-hover:bg-opacity-50"></div>
+            <div class="absolute inset-y-0 -left-1 -right-1 group-hover:bg-gray-300 dark:group-hover:bg-gray-600 group-hover:bg-opacity-50"></div>
         </div>
 
         <!-- Right Panel -->
@@ -219,9 +220,9 @@
                 <PDFPreview />
             </div>
 
-            <!-- Settings Panel -->
+            <!-- Settings Panel - FIXED: Added dark mode styling -->
             {#if showSettings}
-                <div class="w-80 bg-white border-l border-gray-200 overflow-y-auto">
+                <div class="w-80 bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 overflow-y-auto">
                     <SettingsPanel onClose={() => showSettings = false} />
                 </div>
             {/if}

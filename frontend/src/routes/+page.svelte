@@ -22,16 +22,16 @@
     <meta name="description" content="Create professional CVs with our AI-powered Markdown editor. Build, customize, and export beautiful resumes in minutes." />
 </svelte:head>
 
-<div class="bg-gradient-to-br from-primary-50 to-blue-100 min-h-screen">
+<div class="bg-gradient-to-br from-primary-50 to-blue-100 dark:from-gray-900 dark:to-gray-800 min-h-screen">
     <!-- Hero Section -->
     <div class="relative overflow-hidden">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
             <div class="text-center">
-                <h1 class="text-4xl md:text-6xl font-bold text-gray-900 mb-6">
+                <h1 class="text-4xl md:text-6xl font-bold text-gray-900 dark:text-white mb-6">
                     Create Professional CVs
-                    <span class="text-primary-600">in Minutes</span>
+                    <span class="text-primary-600 dark:text-primary-400">in Minutes</span>
                 </h1>
-                <p class="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
+                <p class="text-xl text-gray-600 dark:text-gray-300 mb-8 max-w-3xl mx-auto">
                     Build stunning resumes with our AI-powered Markdown editor. 
                     Real-time PDF preview, professional templates, and intelligent suggestions.
                 </p>
@@ -50,13 +50,13 @@
     </div>
 
     <!-- Features Section -->
-    <div class="py-20 bg-white">
+    <div class="py-20 bg-white dark:bg-gray-900">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="text-center mb-16">
-                <h2 class="text-3xl font-bold text-gray-900 mb-4">
+                <h2 class="text-3xl font-bold text-gray-900 dark:text-white mb-4">
                     Everything you need to create the perfect CV
                 </h2>
-                <p class="text-lg text-gray-600">
+                <p class="text-lg text-gray-600 dark:text-gray-300">
                     Powerful features designed to make CV creation effortless
                 </p>
             </div>
@@ -64,66 +64,66 @@
             <div class="grid md:grid-cols-3 gap-8">
                 <!-- Real-time Preview -->
                 <div class="text-center p-6">
-                    <div class="w-16 h-16 bg-primary-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                        <FileText class="h-8 w-8 text-primary-600" />
+                    <div class="w-16 h-16 bg-primary-100 dark:bg-primary-900 rounded-lg flex items-center justify-center mx-auto mb-4">
+                        <FileText class="h-8 w-8 text-primary-600 dark:text-primary-400" />
                     </div>
-                    <h3 class="text-xl font-semibold text-gray-900 mb-2">Real-time Preview</h3>
-                    <p class="text-gray-600">
+                    <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">Real-time Preview</h3>
+                    <p class="text-gray-600 dark:text-gray-300">
                         See your CV update instantly as you type with our live PDF preview
                     </p>
                 </div>
 
                 <!-- AI-Powered Editing -->
                 <div class="text-center p-6">
-                    <div class="w-16 h-16 bg-green-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                        <Zap class="h-8 w-8 text-green-600" />
+                    <div class="w-16 h-16 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center mx-auto mb-4">
+                        <Zap class="h-8 w-8 text-green-600 dark:text-green-400" />
                     </div>
-                    <h3 class="text-xl font-semibold text-gray-900 mb-2">AI-Powered Editing</h3>
-                    <p class="text-gray-600">
+                    <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">AI-Powered Editing</h3>
+                    <p class="text-gray-600 dark:text-gray-300">
                         Get intelligent suggestions and improvements with our built-in AI assistant
                     </p>
                 </div>
 
                 <!-- Professional Templates -->
                 <div class="text-center p-6">
-                    <div class="w-16 h-16 bg-purple-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                        <Edit3 class="h-8 w-8 text-purple-600" />
+                    <div class="w-16 h-16 bg-purple-100 dark:bg-purple-900 rounded-lg flex items-center justify-center mx-auto mb-4">
+                        <Edit3 class="h-8 w-8 text-purple-600 dark:text-purple-400" />
                     </div>
-                    <h3 class="text-xl font-semibold text-gray-900 mb-2">Professional Templates</h3>
-                    <p class="text-gray-600">
+                    <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">Professional Templates</h3>
+                    <p class="text-gray-600 dark:text-gray-300">
                         Choose from carefully designed templates for different industries
                     </p>
                 </div>
 
                 <!-- Easy Export -->
                 <div class="text-center p-6">
-                    <div class="w-16 h-16 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                        <Download class="h-8 w-8 text-blue-600" />
+                    <div class="w-16 h-16 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center mx-auto mb-4">
+                        <Download class="h-8 w-8 text-blue-600 dark:text-blue-400" />
                     </div>
-                    <h3 class="text-xl font-semibold text-gray-900 mb-2">Multiple Export Options</h3>
-                    <p class="text-gray-600">
+                    <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">Multiple Export Options</h3>
+                    <p class="text-gray-600 dark:text-gray-300">
                         Download your CV as PDF or Markdown with custom styling options
                     </p>
                 </div>
 
                 <!-- ATS Optimization -->
                 <div class="text-center p-6">
-                    <div class="w-16 h-16 bg-orange-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                        <Shield class="h-8 w-8 text-orange-600" />
+                    <div class="w-16 h-16 bg-orange-100 dark:bg-orange-900 rounded-lg flex items-center justify-center mx-auto mb-4">
+                        <Shield class="h-8 w-8 text-orange-600 dark:text-orange-400" />
                     </div>
-                    <h3 class="text-xl font-semibold text-gray-900 mb-2">ATS Optimization</h3>
-                    <p class="text-gray-600">
+                    <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">ATS Optimization</h3>
+                    <p class="text-gray-600 dark:text-gray-300">
                         Get scored and suggestions to make your CV ATS-friendly
                     </p>
                 </div>
 
                 <!-- Secure & Private -->
                 <div class="text-center p-6">
-                    <div class="w-16 h-16 bg-red-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                        <Users class="h-8 w-8 text-red-600" />
+                    <div class="w-16 h-16 bg-red-100 dark:bg-red-900 rounded-lg flex items-center justify-center mx-auto mb-4">
+                        <Users class="h-8 w-8 text-red-600 dark:text-red-400" />
                     </div>
-                    <h3 class="text-xl font-semibold text-gray-900 mb-2">Secure & Private</h3>
-                    <p class="text-gray-600">
+                    <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">Secure & Private</h3>
+                    <p class="text-gray-600 dark:text-gray-300">
                         Your data is encrypted and stored securely. You own your content
                     </p>
                 </div>
@@ -132,12 +132,12 @@
     </div>
 
     <!-- CTA Section -->
-    <div class="py-20 bg-primary-600">
+    <div class="py-20 bg-primary-600 dark:bg-gray-800">
         <div class="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
             <h2 class="text-3xl font-bold text-white mb-4">
                 Ready to create your perfect CV?
             </h2>
-            <p class="text-xl text-primary-100 mb-8">
+            <p class="text-xl text-primary-100 dark:text-gray-300 mb-8">
                 Join thousands of professionals who have already built their careers with ResumeForge
             </p>
             <Button size="lg" variant="secondary" on:click={handleGetStarted}>

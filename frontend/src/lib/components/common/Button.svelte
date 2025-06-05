@@ -1,20 +1,17 @@
-<script lang="ts">
-    export let variant: 'primary' | 'secondary' | 'outline' | 'danger' = 'primary';
-    export let size: 'sm' | 'md' | 'lg' = 'md';
-    export let disabled: boolean = false;
-    export let loading: boolean = false;
-    export let type: 'button' | 'submit' | 'reset' = 'button';
-    export let href: string | null = null;
-    
-    // Add support for custom classes
-    let className = '';
-    export { className as class };
+<script>
+    export let variant = 'primary'; // primary, secondary, outline, ghost
+    export let size = 'md'; // sm, md, lg
+    export let href = null;
+    export let type = 'button';
+    export let disabled = false;
+    export let loading = false;
+    export let className = '';
 
     const variants = {
-        primary: 'bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500',
-        secondary: 'bg-gray-600 text-white hover:bg-gray-700 focus:ring-gray-500',
-        outline: 'border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 focus:ring-primary-500',
-        danger: 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500'
+        primary: 'bg-primary-600 hover:bg-primary-700 text-white border-transparent dark:bg-primary-600 dark:hover:bg-primary-700',
+        secondary: 'bg-gray-200 hover:bg-gray-300 text-gray-900 border-transparent dark:bg-gray-600 dark:hover:bg-gray-700 dark:text-white',
+        outline: 'border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700',
+        ghost: 'text-gray-700 hover:bg-gray-100 border-transparent dark:text-gray-300 dark:hover:bg-gray-700'
     };
 
     const sizes = {
@@ -23,9 +20,8 @@
         lg: 'px-6 py-3 text-base'
     };
 
-    const baseClasses = 'inline-flex items-center justify-center font-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed';
+    const baseClasses = 'inline-flex items-center justify-center font-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 dark:focus:ring-offset-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed border';
     
-    // Updated to include custom className
     $: classes = `${baseClasses} ${variants[variant]} ${sizes[size]} ${className}`.trim();
 </script>
 

@@ -10,43 +10,44 @@
     import Input from '$lib/components/common/Input.svelte';
     import { Plus, FileText, Edit, Trash2, Download, Eye } from 'lucide-svelte';
 
+    // Modal state variables - THESE WERE MISSING!
+    let showTemplateModal = false;
     let showNewCVModal = false;
     let showDeleteModal = false;
-    let showTemplateModal = false;
-    let newCVName = '';
+    
+    // CV creation variables - THESE WERE MISSING!
     let selectedTemplate = null;
-    let cvToDelete = null;
+    let newCVName = '';
     let creatingCV = false;
+    
+    // Delete variables - THESE WERE MISSING!
+    let cvToDelete = null;
     let deletingCV = false;
 
     // Redirect if not authenticated
-    onMount(async () => {
-        if (!$isAuthenticated) {
-            goto('/auth/login');
-            return;
-        }
+    $: if (!$isAuthenticated) {
+        goto('/auth/login');
+    }
 
-        // Load user's CVs and templates
-        await Promise.all([
-            cvService.loadCVs(),
-            cvService.loadTemplates()
-        ]);
+    onMount(async () => {
+        if ($isAuthenticated) {
+            await cvService.loadCVs();
+            await cvService.loadTemplates();
+        }
     });
 
     function handleNewCV() {
-        newCVName = '';
-        selectedTemplate = null;
         showTemplateModal = true;
-    }
-
-    function handleTemplateSelect(template) {
-        selectedTemplate = template;
-        showTemplateModal = false;
-        showNewCVModal = true;
     }
 
     function handleCreateBlank() {
         selectedTemplate = null;
+        showTemplateModal = false;
+        showNewCVModal = true;
+    }
+
+    function handleTemplateSelect(template) {
+        selectedTemplate = template;
         showTemplateModal = false;
         showNewCVModal = true;
     }
@@ -60,20 +61,29 @@
         creatingCV = true;
 
         try {
+            const templateContent = selectedTemplate?.content || `# ${newCVName}\n\n## Contact Information\n\n## Summary\n\n## Experience\n\n## Education\n\n## Skills`;
+            
             const result = await cvService.createCV(
                 newCVName.trim(),
-                '',
-                null,
-                selectedTemplate?.id
+                templateContent,
+                { 
+                    fontSize: 12,
+                    fontFamily: 'Arial',
+                    theme: 'professional' 
+                }
             );
 
             if (result.success) {
                 showNewCVModal = false;
+                newCVName = '';
+                selectedTemplate = null;
                 addToast('CV created successfully!', 'success');
                 goto(`/editor?cv=${result.data.id}`);
             } else {
                 addToast(result.error || 'Failed to create CV', 'error');
             }
+        } catch (error) {
+            addToast('Failed to create CV', 'error');
         } finally {
             creatingCV = false;
         }
@@ -100,40 +110,55 @@
                 showDeleteModal = false;
                 cvToDelete = null;
                 addToast('CV deleted successfully', 'success');
+                await cvService.loadCVs(); // Refresh the list
             } else {
                 addToast(result.error || 'Failed to delete CV', 'error');
             }
+        } catch (error) {
+            addToast('Failed to delete CV', 'error');
         } finally {
             deletingCV = false;
         }
     }
 
     async function handleDownloadPDF(cv) {
-        const result = await cvService.downloadPDF(cv.id, `${cv.name}.pdf`);
-        if (!result.success) {
-            addToast(result.error || 'Failed to download PDF', 'error');
-        }
-    }
-
-    async function handleDownloadMarkdown(cv) {
-        const result = await cvService.downloadMarkdown(cv.id, `${cv.name}.md`);
-        if (!result.success) {
-            addToast(result.error || 'Failed to download Markdown', 'error');
+        try {
+            const result = await cvService.generatePDF(cv.id);
+            
+            if (result.success) {
+                // Create download link
+                const blob = new Blob([result.data], { type: 'application/pdf' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${cv.name}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+                
+                addToast('PDF downloaded successfully', 'success');
+            } else {
+                addToast(result.error || 'Failed to generate PDF', 'error');
+            }
+        } catch (error) {
+            addToast('Failed to download PDF', 'error');
         }
     }
 </script>
 
+<!-- Rest of your template stays the same -->
 <svelte:head>
     <title>Dashboard - ResumeForge</title>
 </svelte:head>
 
-<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 bg-white dark:bg-black min-h-screen">
     <!-- Header -->
     <div class="mb-8">
-        <h1 class="text-3xl font-bold text-gray-900 mb-2">
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">
             Welcome back, {$user?.email}
         </h1>
-        <p class="text-gray-600">
+        <p class="text-gray-600 dark:text-gray-300">
             Manage your CVs and create new ones
         </p>
     </div>
@@ -150,15 +175,15 @@
     {#if $isLoading}
         <div class="flex items-center justify-center py-12">
             <div class="spinner"></div>
-            <span class="ml-2 text-gray-600">Loading your CVs...</span>
+            <span class="ml-2 text-gray-600 dark:text-gray-300">Loading your CVs...</span>
         </div>
     {:else if $cvs.length === 0}
         <div class="text-center py-12">
-            <FileText class="h-16 w-16 text-gray-300 mx-auto mb-4" />
-            <h3 class="text-lg font-medium text-gray-900 mb-2">
+            <FileText class="h-16 w-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+            <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
                 No CVs yet
             </h3>
-            <p class="text-gray-600 mb-6">
+            <p class="text-gray-600 dark:text-gray-300 mb-6">
                 Get started by creating your first professional CV
             </p>
             <Button on:click={handleNewCV}>
@@ -169,14 +194,14 @@
     {:else}
         <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {#each $cvs as cv (cv.id)}
-                <div class="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
                     <div class="p-6">
                         <div class="flex items-start justify-between mb-4">
                             <div class="flex-1">
-                                <h3 class="text-lg font-semibold text-gray-900 mb-1">
+                                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-1">
                                     {cv.name}
                                 </h3>
-                                <p class="text-sm text-gray-500">
+                                <p class="text-sm text-gray-500 dark:text-gray-400">
                                     Updated {formatRelativeTime(cv.updated_at)}
                                 </p>
                             </div>
@@ -199,7 +224,7 @@
                             </div>
                             
                             <button
-                                class="text-gray-400 hover:text-red-600 transition-colors"
+                                class="text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 transition-colors"
                                 on:click={() => handleDeleteCV(cv)}
                                 title="Delete CV"
                             >
@@ -216,28 +241,28 @@
 <!-- Template Selection Modal -->
 <Modal bind:open={showTemplateModal} title="Choose a Template" size="lg">
     <div class="space-y-6">
-        <p class="text-gray-600">
+        <p class="text-gray-600 dark:text-gray-300">
             Start with a professional template or create a blank CV
         </p>
 
         <!-- Blank option -->
-        <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-primary-300 cursor-pointer transition-colors"
+        <div class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center hover:border-primary-300 dark:hover:border-primary-500 cursor-pointer transition-colors"
              on:click={handleCreateBlank}>
-            <Plus class="h-12 w-12 text-gray-400 mx-auto mb-3" />
-            <h3 class="text-lg font-medium text-gray-900 mb-1">Start from Blank</h3>
-            <p class="text-gray-600">Create a CV from scratch with your own content</p>
+            <Plus class="h-12 w-12 text-gray-400 dark:text-gray-500 mx-auto mb-3" />
+            <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-1">Start from Blank</h3>
+            <p class="text-gray-600 dark:text-gray-300">Create a CV from scratch with your own content</p>
         </div>
 
         <!-- Templates -->
         {#if $templates.length > 0}
             <div class="grid md:grid-cols-2 gap-4">
                 {#each $templates as template (template.id)}
-                    <div class="border border-gray-200 rounded-lg p-4 hover:border-primary-300 cursor-pointer transition-colors"
+                    <div class="border border-gray-200 dark:border-gray-600 rounded-lg p-4 hover:border-primary-300 dark:hover:border-primary-500 cursor-pointer transition-colors"
                          on:click={() => handleTemplateSelect(template)}>
-                        <h3 class="font-medium text-gray-900 mb-1">{template.name}</h3>
-                        <p class="text-sm text-gray-600 mb-2">{template.description}</p>
+                        <h3 class="font-medium text-gray-900 dark:text-white mb-1">{template.name}</h3>
+                        <p class="text-sm text-gray-600 dark:text-gray-300 mb-2">{template.description}</p>
                         {#if template.is_default === 'true'}
-                            <span class="inline-block bg-primary-100 text-primary-800 text-xs px-2 py-1 rounded">
+                            <span class="inline-block bg-primary-100 dark:bg-primary-900 text-primary-800 dark:text-primary-200 text-xs px-2 py-1 rounded">
                                 Recommended
                             </span>
                         {/if}
@@ -252,8 +277,8 @@
 <Modal bind:open={showNewCVModal} title="Create New CV">
     <div class="space-y-4">
         {#if selectedTemplate}
-            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <p class="text-sm text-blue-800">
+            <div class="bg-blue-50 dark:bg-blue-900 border border-blue-200 dark:border-blue-700 rounded-lg p-4">
+                <p class="text-sm text-blue-800 dark:text-blue-200">
                     Using template: <strong>{selectedTemplate.name}</strong>
                 </p>
             </div>
@@ -284,8 +309,8 @@
 <!-- Delete Confirmation Modal -->
 <Modal bind:open={showDeleteModal} title="Delete CV">
     <div class="space-y-4">
-        <p class="text-gray-600">
-            Are you sure you want to delete <strong>{cvToDelete?.name}</strong>? 
+        <p class="text-gray-600 dark:text-gray-300">
+            Are you sure you want to delete <strong class="text-gray-900 dark:text-white">{cvToDelete?.name}</strong>? 
             This action cannot be undone.
         </p>
     </div>

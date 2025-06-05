@@ -77,29 +77,30 @@
     <title>Sign In - ResumeForge</title>
 </svelte:head>
 
-<div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+<!-- FIXED: Added dark mode styling -->
+<div class="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-black py-12 px-4 sm:px-6 lg:px-8">
     <div class="max-w-md w-full space-y-8">
-        <!-- Header -->
+        <!-- Header - FIXED: Added dark mode styling -->
         <div class="text-center">
             <div class="flex justify-center">
-                <FileText class="h-12 w-12 text-primary-600" />
+                <FileText class="h-12 w-12 text-primary-600 dark:text-primary-400" />
             </div>
-            <h2 class="mt-6 text-3xl font-bold text-gray-900">
+            <h2 class="mt-6 text-3xl font-bold text-gray-900 dark:text-white">
                 Sign in to your account
             </h2>
-            <p class="mt-2 text-sm text-gray-600">
+            <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">
                 Or
-                <a href="/auth/register" class="font-medium text-primary-600 hover:text-primary-500">
+                <a href="/auth/register" class="font-medium text-primary-600 dark:text-primary-400 hover:text-primary-500 dark:hover:text-primary-300">
                     create a new account
                 </a>
             </p>
         </div>
 
-        <!-- Form -->
+        <!-- Form - FIXED: Added dark mode styling -->
         <form class="mt-8 space-y-6" on:submit|preventDefault={handleSubmit}>
             {#if errors.general}
-                <div class="bg-red-50 border border-red-200 rounded-lg p-4">
-                    <p class="text-sm text-red-600">{errors.general}</p>
+                <div class="bg-red-50 dark:bg-red-900 border border-red-200 dark:border-red-700 rounded-lg p-4">
+                    <p class="text-sm text-red-600 dark:text-red-300">{errors.general}</p>
                 </div>
             {/if}
 
@@ -127,9 +128,10 @@
                 />
             </div>
 
+            <!-- FIXED: Added dark mode styling -->
             <div class="flex items-center justify-between">
                 <div class="text-sm">
-                    <a href="/auth/forgot-password" class="font-medium text-primary-600 hover:text-primary-500">
+                    <a href="/auth/forgot-password" class="font-medium text-primary-600 dark:text-primary-400 hover:text-primary-500 dark:hover:text-primary-300">
                         Forgot your password?
                     </a>
                 </div>
@@ -151,14 +153,14 @@
             </Button>
         </form>
 
-        <!-- Demo option -->
+        <!-- Demo option - FIXED: Added dark mode styling -->
         <div class="mt-6">
             <div class="relative">
                 <div class="absolute inset-0 flex items-center">
-                    <div class="w-full border-t border-gray-300" />
+                    <div class="w-full border-t border-gray-300 dark:border-gray-600" />
                 </div>
                 <div class="relative flex justify-center text-sm">
-                    <span class="px-2 bg-gray-50 text-gray-500">Or</span>
+                    <span class="px-2 bg-gray-50 dark:bg-black text-gray-500 dark:text-gray-400">Or</span>
                 </div>
             </div>
 

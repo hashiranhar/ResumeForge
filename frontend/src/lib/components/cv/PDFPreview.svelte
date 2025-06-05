@@ -5,6 +5,7 @@
     import { draftCV, currentCV } from '$lib/stores/cv.js';
     import { authenticatedFetch } from '$lib/stores/auth.js';
     import { debounce } from '$lib/utils/helpers.js';
+    import { addToast } from '$lib/stores/toast.js';
     import { Eye, ZoomIn, ZoomOut, RotateCcw } from 'lucide-svelte';
 
     let previewContainer;
@@ -188,9 +189,50 @@
             .cv-content h3 {
                 color: ${themeColors.secondary};
                 font-size: ${config.fontSize - 1}pt;
-                white-space: nowrap;
-                width: 110pt;
-                text-align: right;
+                font-weight: bold;
+                margin: 12pt 0 4pt 0;
+            }
+
+            .cv-content h4 {
+                color: ${themeColors.secondary};
+                font-size: ${config.fontSize}pt;
+                font-weight: bold;
+                margin: 8pt 0 4pt 0;
+            }
+
+            .cv-content p {
+                margin: 4pt 0;
+            }
+
+            .cv-content ul, .cv-content ol {
+                margin: 4pt 0;
+                padding-left: 16pt;
+            }
+
+            .cv-content li {
+                margin: 2pt 0;
+            }
+
+            .center-text {
+                text-align: center;
+            }
+
+            .date-line {
+                display: flex;
+                justify-content: space-between;
+                align-items: baseline;
+                margin: 8pt 0 4pt 0;
+            }
+
+            .date-line .content {
+                font-weight: bold;
+                color: ${themeColors.primary};
+            }
+
+            .date-line .date {
+                font-style: italic;
+                color: ${themeColors.secondary};
+                font-size: ${config.fontSize - 1}pt;
             }
 
             .header-date {
@@ -262,23 +304,24 @@
     }
 </script>
 
-<div class="flex flex-col h-full bg-gray-100">
-    <!-- Preview Header -->
-    <div class="bg-white border-b border-gray-200 px-4 py-3">
+<!-- FIXED: Added dark mode styling to entire component -->
+<div class="flex flex-col h-full bg-gray-100 dark:bg-gray-900">
+    <!-- Preview Header - FIXED: Added dark mode styling -->
+    <div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3">
         <div class="flex items-center justify-between">
             <div class="flex items-center space-x-2">
-                <Eye class="h-4 w-4 text-gray-500" />
-                <span class="text-sm font-medium text-gray-900">PDF Preview</span>
+                <Eye class="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                <span class="text-sm font-medium text-gray-900 dark:text-white">PDF Preview</span>
                 {#if isLoading}
-                    <div class="spinner"></div>
+                    <div class="spinner text-gray-500 dark:text-gray-400"></div>
                 {/if}
             </div>
 
             <div class="flex items-center space-x-2">
-                <!-- Zoom controls -->
+                <!-- Zoom controls - FIXED: Added dark mode styling -->
                 <div class="flex items-center space-x-1">
                     <button
-                        class="p-1 text-gray-500 hover:text-gray-700 disabled:opacity-50"
+                        class="p-1 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 disabled:opacity-50 transition-colors"
                         on:click={handleZoomOut}
                         disabled={zoomLevel <= 50}
                         title="Zoom out"
@@ -286,12 +329,12 @@
                         <ZoomOut class="h-4 w-4" />
                     </button>
                     
-                    <span class="text-sm text-gray-600 min-w-12 text-center">
+                    <span class="text-sm text-gray-600 dark:text-gray-300 min-w-12 text-center">
                         {zoomLevel}%
                     </span>
                     
                     <button
-                        class="p-1 text-gray-500 hover:text-gray-700 disabled:opacity-50"
+                        class="p-1 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 disabled:opacity-50 transition-colors"
                         on:click={handleZoomIn}
                         disabled={zoomLevel >= 200}
                         title="Zoom in"
@@ -300,7 +343,7 @@
                     </button>
                     
                     <button
-                        class="p-1 text-gray-500 hover:text-gray-700"
+                        class="p-1 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
                         on:click={handleResetZoom}
                         title="Reset zoom"
                     >
@@ -311,17 +354,17 @@
         </div>
     </div>
 
-    <!-- Preview Content -->
-    <div class="flex-1 overflow-auto p-4">
+    <!-- Preview Content - FIXED: Added dark mode styling -->
+    <div class="flex-1 overflow-auto p-4 bg-gray-100 dark:bg-gray-900">
         <div 
             class="mx-auto transition-transform duration-200"
             style="transform: scale({zoomLevel / 100}); transform-origin: top center;"
             bind:this={previewContainer}
         >
-            <div class="bg-white shadow-lg">
+            <!-- PDF Preview stays white (as it should be like a real document) -->
+            <div class="bg-white shadow-lg dark:shadow-2xl">
                 {@html previewContent}
             </div>
         </div>
     </div>
 </div>
-                
