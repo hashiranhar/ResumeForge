@@ -7,7 +7,12 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 30
     environment: str = "development"
     
+    huggingface_api_key: str
+    llm_model: str = "deepseek-ai/DeepSeek-V3-0324"
+    llm_max_tokens: int = 2000
+    llm_temperature: float = 0.7
+    
     class Config:
-        env_file = ".env"
+        env_file = "../.env"
 
 settings = Settings()
