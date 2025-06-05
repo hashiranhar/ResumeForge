@@ -104,6 +104,5 @@
 	.text-secondary { color: var(--text-secondary); }
 	.border-border { border-color: var(--border); }
 	.bg-accent { background-color: var(--accent); }
-	.bg-accent-hover:hover { background-color: var(--accent-hover); }
 	.text-accent { color: var(--accent); }
 </style>

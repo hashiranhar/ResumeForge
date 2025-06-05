@@ -85,7 +85,6 @@
 <style>
 	.bg-primary { background-color: var(--bg-primary); }
 	.bg-secondary { background-color: var(--bg-secondary); }
-	.bg-tertiary { background-color: var(--bg-tertiary); }
 	.text-primary { color: var(--text-primary); }
 	.text-secondary { color: var(--text-secondary); }
 	.border-border { border-color: var(--border); }
