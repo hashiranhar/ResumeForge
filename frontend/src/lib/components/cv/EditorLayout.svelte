@@ -1,6 +1,7 @@
 <script>
     import { onMount } from 'svelte';
-    import { currentCV, draftCV, hasUnsavedChanges } from '$lib/stores/cv.js';
+    import { currentCV, draftCV, hasUnsavedChanges, cvService } from '$lib/stores/cv.js';
+    import { addToast } from '$lib/stores/toast.js';
     import { Save, Download, Settings, MessageSquare, Edit3, Zap } from 'lucide-svelte';
     import Button from '$lib/components/common/Button.svelte';
     import MarkdownEditor from './MarkdownEditor.svelte';
