@@ -1,0 +1,229 @@
+<script>
+    import { draftCV } from '$lib/stores/cv.js';
+    import { X, Palette, Type, Ruler } from 'lucide-svelte';
+    import Button from '$lib/components/common/Button.svelte';
+
+    export let onClose = () => {};
+
+    // Reactive settings
+    $: settings = $draftCV.settings || {};
+
+    function updateSettings(key, value) {
+        draftCV.update(cv => ({
+            ...cv,
+            settings: {
+                ...cv.settings,
+                [key]: value
+            }
+        }));
+    }
+
+    function updateMargin(side, value) {
+        const margins = { ...settings.margins };
+        margins[side] = parseInt(value) || 0;
+        updateSettings('margins', margins);
+    }
+
+    const fontOptions = [
+        { value: 'Arial', label: 'Arial' },
+        { value: 'Helvetica', label: 'Helvetica' },
+        { value: 'Times New Roman', label: 'Times New Roman' },
+        { value: 'Georgia', label: 'Georgia' },
+        { value: 'Verdana', label: 'Verdana' }
+    ];
+
+    const themeOptions = [
+        { value: 'professional', label: 'Professional', color: '#2c3e50' },
+        { value: 'modern', label: 'Modern', color: '#1a1a1a' },
+        { value: 'minimal', label: 'Minimal', color: '#000000' },
+        { value: 'creative', label: 'Creative', color: '#8e44ad' }
+    ];
+</script>
+
+<div class="h-full flex flex-col bg-white">
+    <!-- Header -->
+    <div class="border-b border-gray-200 p-4">
+        <div class="flex items-center justify-between">
+            <h3 class="text-lg font-semibold text-gray-900">CV Settings</h3>
+            <button
+                class="text-gray-400 hover:text-gray-600"
+                on:click={onClose}
+            >
+                <X class="h-5 w-5" />
+            </button>
+        </div>
+    </div>
+
+    <!-- Settings Content -->
+    <div class="flex-1 overflow-y-auto p-4 space-y-6">
+        <!-- Font Settings -->
+        <div class="space-y-4">
+            <div class="flex items-center space-x-2">
+                <Type class="h-4 w-4 text-gray-500" />
+                <h4 class="font-medium text-gray-900">Typography</h4>
+            </div>
+
+            <!-- Font Family -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Font Family
+                </label>
+                <select
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    value={settings.font || 'Arial'}
+                    on:change={(e) => updateSettings('font', e.target.value)}
+                >
+                    {#each fontOptions as option}
+                        <option value={option.value}>{option.label}</option>
+                    {/each}
+                </select>
+            </div>
+
+            <!-- Font Size -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Font Size: {settings.fontSize || 11}pt
+                </label>
+                <input
+                    type="range"
+                    min="9"
+                    max="14"
+                    step="0.5"
+                    value={settings.fontSize || 11}
+                    on:input={(e) => updateSettings('fontSize', parseFloat(e.target.value))}
+                    class="w-full"
+                />
+                <div class="flex justify-between text-xs text-gray-500 mt-1">
+                    <span>9pt</span>
+                    <span>14pt</span>
+                </div>
+            </div>
+
+            <!-- Line Height -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Line Height: {settings.lineHeight || 1.4}
+                </label>
+                <input
+                    type="range"
+                    min="1.0"
+                    max="2.0"
+                    step="0.1"
+                    value={settings.lineHeight || 1.4}
+                    on:input={(e) => updateSettings('lineHeight', parseFloat(e.target.value))}
+                    class="w-full"
+                />
+                <div class="flex justify-between text-xs text-gray-500 mt-1">
+                    <span>1.0</span>
+                    <span>2.0</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Theme Settings -->
+        <div class="space-y-4">
+            <div class="flex items-center space-x-2">
+                <Palette class="h-4 w-4 text-gray-500" />
+                <h4 class="font-medium text-gray-900">Theme</h4>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                {#each themeOptions as theme}
+                    <button
+                        class="p-3 border-2 rounded-lg text-left transition-colors {settings.theme === theme.value ? 'border-primary-500 bg-primary-50' : 'border-gray-200 hover:border-gray-300'}"
+                        on:click={() => updateSettings('theme', theme.value)}
+                    >
+                        <div class="flex items-center space-x-2">
+                            <div 
+                                class="w-4 h-4 rounded-full"
+                                style="background-color: {theme.color}"
+                            ></div>
+                            <span class="text-sm font-medium">{theme.label}</span>
+                        </div>
+                    </button>
+                {/each}
+            </div>
+        </div>
+
+        <!-- Margin Settings -->
+        <div class="space-y-4">
+            <div class="flex items-center space-x-2">
+                <Ruler class="h-4 w-4 text-gray-500" />
+                <h4 class="font-medium text-gray-900">Margins (mm)</h4>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        Top
+                    </label>
+                    <input
+                        type="number"
+                        min="10"
+                        max="50"
+                        value={settings.margins?.top || 20}
+                        on:input={(e) => updateMargin('top', e.target.value)}
+                        class="w-full px-3 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                    />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        Bottom
+                    </label>
+                    <input
+                        type="number"
+                        min="10"
+                        max="50"
+                        value={settings.margins?.bottom || 20}
+                        on:input={(e) => updateMargin('bottom', e.target.value)}
+                        class="w-full px-3 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                    />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        Left
+                    </label>
+                    <input
+                        type="number"
+                        min="10"
+                        max="40"
+                        value={settings.margins?.left || 15}
+                        on:input={(e) => updateMargin('left', e.target.value)}
+                        class="w-full px-3 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                    />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        Right
+                    </label>
+                    <input
+                        type="number"
+                        min="10"
+                        max="40"
+                        value={settings.margins?.right || 15}
+                        on:input={(e) => updateMargin('right', e.target.value)}
+                        class="w-full px-3 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                    />
+                </div>
+            </div>
+        </div>
+
+        <!-- Reset to Defaults -->
+        <div class="pt-4 border-t border-gray-200">
+            <Button 
+                variant="outline" 
+                size="sm"
+                on:click={() => updateSettings('', {
+                    font: 'Arial',
+                    fontSize: 11,
+                    lineHeight: 1.4,
+                    margins: { top: 20, bottom: 20, left: 15, right: 15 },
+                    theme: 'professional'
+                })}
+                class="w-full"
+            >
+                Reset to Defaults
+            </Button>
+        </div>
+    </div>
+</div>
