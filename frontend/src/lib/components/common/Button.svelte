@@ -1,10 +1,14 @@
 <script lang="ts">
-    export let variant: 'primary' | 'secondary' | 'outline' | 'danger' = 'primary'; // Restrict to valid keys
-    export let size: 'sm' | 'md' | 'lg' = 'md'; // Restrict to valid keys
+    export let variant: 'primary' | 'secondary' | 'outline' | 'danger' = 'primary';
+    export let size: 'sm' | 'md' | 'lg' = 'md';
     export let disabled: boolean = false;
     export let loading: boolean = false;
-    export let type: 'button' | 'submit' | 'reset' = 'button'; // Add valid button types
+    export let type: 'button' | 'submit' | 'reset' = 'button';
     export let href: string | null = null;
+    
+    // Add support for custom classes
+    let className = '';
+    export { className as class };
 
     const variants = {
         primary: 'bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500',
@@ -21,7 +25,8 @@
 
     const baseClasses = 'inline-flex items-center justify-center font-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed';
     
-    $: classes = `${baseClasses} ${variants[variant]} ${sizes[size]}`;
+    // Updated to include custom className
+    $: classes = `${baseClasses} ${variants[variant]} ${sizes[size]} ${className}`.trim();
 </script>
 
 {#if href}
@@ -44,3 +49,19 @@
         <slot />
     </button>
 {/if}
+
+<style>
+    .spinner {
+        width: 16px;
+        height: 16px;
+        border: 2px solid transparent;
+        border-top: 2px solid currentColor;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+</style>

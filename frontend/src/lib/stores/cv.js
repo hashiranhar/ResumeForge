@@ -22,7 +22,7 @@ export const error = writable(null);
 export const draftCV = writable({
     id: null,
     name: 'My CV',
-    markdown_content: '',
+    markdown_content: "",
     settings: {
         font: 'Arial',
         fontSize: 11,
@@ -35,7 +35,7 @@ export const draftCV = writable({
 export const hasUnsavedChanges = derived(
     [currentCV, draftCV],
     ([current, draft]) => {
-        if (!current) return false;
+        if (!current || !current.id) return false; // Fixed: check if current.id exists
         return current.markdown_content !== draft.markdown_content ||
                JSON.stringify(current.settings) !== JSON.stringify(draft.settings);
     }

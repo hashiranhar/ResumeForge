@@ -94,19 +94,22 @@ export const llmService = {
     },
 
     // Function 3: ATS Score Analysis
-    async analyzeATS(cvId = null, cvContent = null, targetRole = null, jobDescription = null) {
+    async analyzeATS(cvId, cvContent, targetRole, jobDescription) {
         isLLMLoading.set(true);
         llmError.set(null);
         
         try {
+            // Prepare the payload with proper null handling
+            const payload = {
+                cv_id: cvId || null,
+                cv_content: cvContent || null,
+                target_role: targetRole && targetRole.trim() ? targetRole.trim() : null,
+                job_description: jobDescription && jobDescription.trim() ? jobDescription.trim() : null
+            };
+
             const response = await authenticatedFetch('/api/llm/ats-score', {
                 method: 'POST',
-                body: JSON.stringify({
-                    cv_id: cvId,
-                    cv_content: cvContent,
-                    target_role: targetRole,
-                    job_description: jobDescription
-                })
+                body: JSON.stringify(payload)
             });
             
             if (!response.ok) {
