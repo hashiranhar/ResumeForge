@@ -1,5 +1,5 @@
 <script>
-	import '../app.css';
+	import '../app.html';
 	import { onMount } from 'svelte';
 	import { theme, user } from '$lib/stores.js';
 	import { auth } from '$lib/api.js';

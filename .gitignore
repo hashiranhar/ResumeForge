@@ -81,3 +81,32 @@ coverage.xml
 
 # FastAPI specific
 .pytest_cache/
+
+
+node_modules
+
+# Output
+build/
+dist/
+.svelte-kit/
+frontend/.svelte-kit/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env
+.env
+.env.*
+!.env.example
+!.env.test
+
+# Vite
+frontend/vite.config.js.timestamp-*
+frontend/vite.config.ts.timestamp-*
+
+# Prettier Ignore
+frontend/.prettierignore
+
+# ESLint Ignore
+frontend/.eslintignore
