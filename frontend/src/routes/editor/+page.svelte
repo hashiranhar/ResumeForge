@@ -22,6 +22,13 @@
     $: isNewCV = $page.url.searchParams.get('new') === 'true';
     $: isDemoMode = $page.url.searchParams.get('demo') === 'true';
 
+    // Reactive statement for dynamic title - THIS FIXES THE ERROR
+    $: pageTitle = isDemo 
+        ? 'Demo Editor - ResumeForge'
+        : $currentCV?.name 
+            ? `${$currentCV.name} - ResumeForge`
+            : 'New CV - ResumeForge';
+
     onMount(async () => {
         isDemo = isDemoMode;
 
@@ -215,16 +222,9 @@ Experienced software engineer with 5+ years of expertise in full-stack developme
     }
 </script>
 
+<!-- FIXED: Replace conditional title with reactive variable -->
 <svelte:head>
-    <title>
-        {#if isDemo}
-            Demo Editor - ResumeForge
-        {:else if $currentCV}
-            {$currentCV.name} - ResumeForge
-        {:else}
-            New CV - ResumeForge
-        {/if}
-    </title>
+    <title>{pageTitle}</title>
 </svelte:head>
 
 <svelte:window on:beforeunload={handleBeforeUnload} />

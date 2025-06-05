@@ -65,26 +65,30 @@
 
             <!-- Font Family -->
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">
+                <label for="font-family" class="block text-sm font-medium text-gray-700 mb-2">
                     Font Family
                 </label>
                 <select
+                    id="font-family"
                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                     value={settings.font || 'Arial'}
                     on:change={(e) => updateSettings('font', e.target.value)}
+                    aria-describedby="font-family-help"
                 >
                     {#each fontOptions as option}
                         <option value={option.value}>{option.label}</option>
                     {/each}
                 </select>
+                <p id="font-family-help" class="sr-only">Select a font family for your CV</p>
             </div>
 
             <!-- Font Size -->
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">
+                <label for="font-size" class="block text-sm font-medium text-gray-700 mb-2">
                     Font Size: {settings.fontSize || 11}pt
                 </label>
                 <input
+                    id="font-size"
                     type="range"
                     min="9"
                     max="14"
@@ -92,8 +96,9 @@
                     value={settings.fontSize || 11}
                     on:input={(e) => updateSettings('fontSize', parseFloat(e.target.value))}
                     class="w-full"
+                    aria-describedby="font-size-range"
                 />
-                <div class="flex justify-between text-xs text-gray-500 mt-1">
+                <div id="font-size-range" class="flex justify-between text-xs text-gray-500 mt-1">
                     <span>9pt</span>
                     <span>14pt</span>
                 </div>
@@ -101,10 +106,11 @@
 
             <!-- Line Height -->
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">
+                <label for="line-height" class="block text-sm font-medium text-gray-700 mb-2">
                     Line Height: {settings.lineHeight || 1.4}
                 </label>
                 <input
+                    id="line-height"
                     type="range"
                     min="1.0"
                     max="2.0"
@@ -112,8 +118,9 @@
                     value={settings.lineHeight || 1.4}
                     on:input={(e) => updateSettings('lineHeight', parseFloat(e.target.value))}
                     class="w-full"
+                    aria-describedby="line-height-range"
                 />
-                <div class="flex justify-between text-xs text-gray-500 mt-1">
+                <div id="line-height-range" class="flex justify-between text-xs text-gray-500 mt-1">
                     <span>1.0</span>
                     <span>2.0</span>
                 </div>
@@ -148,66 +155,74 @@
         <!-- Margin Settings -->
         <div class="space-y-4">
             <div class="flex items-center space-x-2">
-                <Ruler class="h-4 w-4 text-gray-500" />
+                <Ruler class="h-4 w-4 text-gray-500" aria-hidden="true" />
                 <h4 class="font-medium text-gray-900">Margins (mm)</h4>
             </div>
 
             <div class="grid grid-cols-2 gap-3">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                    <label for="margin-top" class="block text-sm font-medium text-gray-700 mb-1">
                         Top
                     </label>
                     <input
+                        id="margin-top"
                         type="number"
                         min="10"
                         max="50"
                         value={settings.margins?.top || 20}
                         on:input={(e) => updateMargin('top', e.target.value)}
                         class="w-full px-3 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                        aria-describedby="margin-help"
                     />
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                    <label for="margin-bottom" class="block text-sm font-medium text-gray-700 mb-1">
                         Bottom
                     </label>
                     <input
+                        id="margin-bottom"
                         type="number"
                         min="10"
                         max="50"
                         value={settings.margins?.bottom || 20}
                         on:input={(e) => updateMargin('bottom', e.target.value)}
                         class="w-full px-3 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                        aria-describedby="margin-help"
                     />
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                    <label for="margin-left" class="block text-sm font-medium text-gray-700 mb-1">
                         Left
                     </label>
                     <input
+                        id="margin-left"
                         type="number"
                         min="10"
                         max="40"
                         value={settings.margins?.left || 15}
                         on:input={(e) => updateMargin('left', e.target.value)}
                         class="w-full px-3 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                        aria-describedby="margin-help"
                     />
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                    <label for="margin-right" class="block text-sm font-medium text-gray-700 mb-1">
                         Right
                     </label>
                     <input
+                        id="margin-right"
                         type="number"
                         min="10"
                         max="40"
                         value={settings.margins?.right || 15}
                         on:input={(e) => updateMargin('right', e.target.value)}
                         class="w-full px-3 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                        aria-describedby="margin-help"
                     />
                 </div>
             </div>
+            <p id="margin-help" class="sr-only">Set the page margins for your CV in millimeters</p>
         </div>
 
+        
         <!-- Reset to Defaults -->
         <div class="pt-4 border-t border-gray-200">
             <Button 
