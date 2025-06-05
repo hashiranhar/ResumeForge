@@ -1,18 +1,14 @@
-<script>
-    export let type = 'text';
-    export let placeholder = '';
-    export let value = '';
-    export let label = '';
-    export let error = '';
-    export let required = false;
-    export let disabled = false;
-    export let id = '';
+<script lang="ts">
+    export let id: string;
+    export let label: string | null = null;
+    export let type: 'text' | 'password' | 'email' | 'number' = 'text'; // Restrict to valid input types
+    export let placeholder: string | null = null;
+    export let required: boolean = false;
+    export let disabled: boolean = false;
+    export let value: string | number = '';
+    export let error: string | null = null;
 
-    $: inputClasses = `block w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 transition-colors ${
-        error 
-            ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
-            : 'border-gray-300 focus:ring-primary-500 focus:border-primary-500'
-    } ${disabled ? 'bg-gray-50 cursor-not-allowed' : 'bg-white'}`;
+    const inputClasses = 'block w-full px-3 py-2 border rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500';
 </script>
 
 <div class="space-y-1">
@@ -25,19 +21,21 @@
         </label>
     {/if}
     
-    <input
-        {id}
-        {type}
-        {placeholder}
-        {required}
-        {disabled}
-        bind:value
-        class={inputClasses}
-        on:input
-        on:change
-        on:focus
-        on:blur
-    />
+    {#if type === 'text' || type === 'password' || type === 'email' || type === 'number'}
+        <input
+            id={id}
+            type={type}
+            placeholder={placeholder}
+            required={required}
+            disabled={disabled}
+            bind:value
+            class={inputClasses}
+            on:input
+            on:change
+            on:focus
+            on:blur
+        />
+    {/if}
     
     {#if error}
         <p class="text-sm text-red-600">{error}</p>

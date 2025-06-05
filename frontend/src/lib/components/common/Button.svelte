@@ -1,10 +1,10 @@
-<script>
-    export let variant = 'primary'; // primary, secondary, outline, danger
-    export let size = 'md'; // sm, md, lg
-    export let disabled = false;
-    export let loading = false;
-    export let type = 'button';
-    export let href = null;
+<script lang="ts">
+    export let variant: 'primary' | 'secondary' | 'outline' | 'danger' = 'primary'; // Restrict to valid keys
+    export let size: 'sm' | 'md' | 'lg' = 'md'; // Restrict to valid keys
+    export let disabled: boolean = false;
+    export let loading: boolean = false;
+    export let type: 'button' | 'submit' | 'reset' = 'button'; // Add valid button types
+    export let href: string | null = null;
 
     const variants = {
         primary: 'bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500',

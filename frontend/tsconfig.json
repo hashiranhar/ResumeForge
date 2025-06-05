@@ -8,7 +8,6 @@
         "resolveJsonModule": true,
         "skipLibCheck": true,
         "sourceMap": true,
-        "strict": true,
-        "verbatimModuleSyntax": true // Use this instead of the removed options
+        "strict": true
     }
 }

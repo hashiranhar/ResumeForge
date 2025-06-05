@@ -3,13 +3,24 @@ import { authenticatedFetch } from './auth.js';
 
 // CV stores
 export const cvs = writable([]);
-export const currentCV = writable(null);
+export const currentCV = writable({
+    id: null,
+    name: '',
+    markdown_content: '',
+    settings: {
+        font: 'Arial',
+        fontSize: 11,
+        margins: { top: 20, bottom: 20, left: 15, right: 15 },
+        theme: 'professional'
+    }
+});
 export const templates = writable([]);
 export const isLoading = writable(false);
 export const error = writable(null);
 
 // Draft CV for non-authenticated users
 export const draftCV = writable({
+    id: null,
     name: 'My CV',
     markdown_content: '',
     settings: {
@@ -68,6 +79,7 @@ export const cvService = {
             const data = await response.json();
             currentCV.set(data);
             draftCV.set({
+                id: data.id,
                 name: data.name,
                 markdown_content: data.markdown_content || '',
                 settings: data.settings || {
@@ -131,6 +143,7 @@ export const cvService = {
             cvs.update(list => [data, ...list]);
             currentCV.set(data);
             draftCV.set({
+                id: data.id,
                 name: data.name,
                 markdown_content: data.markdown_content || '',
                 settings: data.settings
@@ -197,7 +210,17 @@ export const cvService = {
             cvs.update(list => list.filter(cv => cv.id !== cvId));
             
             // Clear current CV if it was deleted
-            currentCV.update(current => current?.id === cvId ? null : current);
+            currentCV.update(current => current?.id === cvId ? {
+                id: null,
+                name: '',
+                markdown_content: '',
+                settings: {
+                    font: 'Arial',
+                    fontSize: 11,
+                    margins: { top: 20, bottom: 20, left: 15, right: 15 },
+                    theme: 'professional'
+                }
+            } : current);
             
             return { success: true };
         } catch (err) {
@@ -304,8 +327,19 @@ export const cvService = {
 
     // Clear current CV (for new draft)
     clearCurrent() {
-        currentCV.set(null);
+        currentCV.set({
+            id: null,
+            name: '',
+            markdown_content: '',
+            settings: {
+                font: 'Arial',
+                fontSize: 11,
+                margins: { top: 20, bottom: 20, left: 15, right: 15 },
+                theme: 'professional'
+            }
+        });
         draftCV.set({
+            id: null,
             name: 'My CV',
             markdown_content: '',
             settings: {

@@ -1,13 +1,12 @@
-<script>
+<script lang="ts">
     import { createEventDispatcher } from 'svelte';
     import { fade } from 'svelte/transition';
     import { X } from 'lucide-svelte';
 
-    export let open = false;
-    export let title = '';
-    export let size = 'md'; // sm, md, lg, xl
-
-    const dispatch = createEventDispatcher();
+    export let open: boolean = false; // Control modal visibility
+    export let title: string = ''; // Modal title
+    export let size: 'sm' | 'md' | 'lg' | 'xl' = 'md'; // Modal size
+    export let close: () => void; // Close function passed from parent
 
     const sizes = {
         sm: 'max-w-md',
@@ -16,18 +15,13 @@
         xl: 'max-w-4xl'
     };
 
-    function close() {
-        open = false;
-        dispatch('close');
-    }
-
-    function handleKeydown(event) {
+    function handleKeydown(event: KeyboardEvent) {
         if (event.key === 'Escape') {
             close();
         }
     }
 
-    function handleBackdropClick(event) {
+    function handleBackdropClick(event: MouseEvent) {
         if (event.target === event.currentTarget) {
             close();
         }

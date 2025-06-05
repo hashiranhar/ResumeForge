@@ -1,32 +1,34 @@
-<script>
-    import { toasts, removeToast } from '$lib/stores/toast.js';
-    import { CheckCircle, XCircle, AlertCircle, Info, X } from 'lucide-svelte';
-    import { fade, fly } from 'svelte/transition';
+<script lang="ts">
+    import { X, CheckCircle, XCircle, AlertTriangle, Info } from 'lucide-svelte'; // Import icons
+    import { fly } from 'svelte/transition';
 
-    const icons = {
+    export let toasts: { id: string; type: 'success' | 'error' | 'warning' | 'info'; message: string }[] = [];
+    export let colors: { success: string; error: string; warning: string; info: string } = {
+        success: 'border-green-500',
+        error: 'border-red-500',
+        warning: 'border-yellow-500',
+        info: 'border-blue-500'
+    };
+    export let icons: { success: typeof CheckCircle; error: typeof XCircle; warning: typeof AlertTriangle; info: typeof Info } = {
         success: CheckCircle,
         error: XCircle,
-        warning: AlertCircle,
+        warning: AlertTriangle,
         info: Info
     };
-
-    const colors = {
-        success: 'bg-green-50 border-green-200 text-green-800',
-        error: 'bg-red-50 border-red-200 text-red-800',
-        warning: 'bg-yellow-50 border-yellow-200 text-yellow-800',
-        info: 'bg-blue-50 border-blue-200 text-blue-800'
-    };
-
-    const iconColors = {
+    export let iconColors: { success: string; error: string; warning: string; info: string } = {
         success: 'text-green-500',
         error: 'text-red-500',
         warning: 'text-yellow-500',
         info: 'text-blue-500'
     };
+
+    function removeToast(id: string) {
+        toasts = toasts.filter(toast => toast.id !== id);
+    }
 </script>
 
 <div class="fixed top-4 right-4 z-50 space-y-2">
-    {#each $toasts as toast (toast.id)}
+    {#each toasts as toast (toast.id)}
         <div 
             class="max-w-sm w-full bg-white shadow-lg rounded-lg border {colors[toast.type]} p-4"
             transition:fly="{{ y: -50, duration: 300 }}"
