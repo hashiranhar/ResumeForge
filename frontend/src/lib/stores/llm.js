@@ -6,6 +6,8 @@ export const chatHistory = writable([]);
 export const isLLMLoading = writable(false);
 export const llmError = writable(null);
 export const atsAnalysis = writable(null);
+export const inlineEditHistory = writable([]); // NEW: Track inline edit history
+export const isInlineEditing = writable(false); // NEW: Separate loading state for inline edits
 
 // LLM service functions
 export const llmService = {
@@ -56,9 +58,9 @@ export const llmService = {
         }
     },
 
-    // Function 2: Inline edit CV content
+    // Function 2: Inline edit CV content - NEW IMPLEMENTATION
     async inlineEdit(cvId, instruction, section = null, autoSave = true) {
-        isLLMLoading.set(true);
+        isInlineEditing.set(true);
         llmError.set(null);
         
         try {
@@ -79,6 +81,18 @@ export const llmService = {
             
             const data = await response.json();
             
+            // Add to inline edit history
+            inlineEditHistory.update(history => [
+                ...history,
+                {
+                    timestamp: new Date().toISOString(),
+                    instruction,
+                    section,
+                    changesMade: data.changes_made || [],
+                    autoSaved: data.auto_saved
+                }
+            ]);
+            
             return {
                 success: true,
                 editedContent: data.edited_content,
@@ -89,7 +103,7 @@ export const llmService = {
             llmError.set(err.message);
             return { success: false, error: err.message };
         } finally {
-            isLLMLoading.set(false);
+            isInlineEditing.set(false);
         }
     },
 
@@ -99,17 +113,14 @@ export const llmService = {
         llmError.set(null);
         
         try {
-            // Prepare the payload with proper null handling
-            const payload = {
-                cv_id: cvId || null,
-                cv_content: cvContent || null,
-                target_role: targetRole && targetRole.trim() ? targetRole.trim() : null,
-                job_description: jobDescription && jobDescription.trim() ? jobDescription.trim() : null
-            };
-
-            const response = await authenticatedFetch('/api/llm/ats-score', {
+            const response = await authenticatedFetch('/api/llm/ats-analysis', {
                 method: 'POST',
-                body: JSON.stringify(payload)
+                body: JSON.stringify({
+                    cv_id: cvId,
+                    cv_content: cvContent,
+                    target_role: targetRole,
+                    job_description: jobDescription
+                })
             });
             
             if (!response.ok) {
@@ -119,18 +130,10 @@ export const llmService = {
             
             const data = await response.json();
             
-            // Store the analysis result
-            atsAnalysis.set(data);
+            // Update ATS analysis store
+            atsAnalysis.set(data.analysis);
             
-            return {
-                success: true,
-                atsScore: data.ats_score,
-                scoreBreakdown: data.score_breakdown,
-                strengths: data.strengths,
-                weaknesses: data.weaknesses,
-                upgradeSuggestions: data.upgrade_suggestions,
-                keywordAnalysis: data.keyword_analysis
-            };
+            return { success: true, analysis: data.analysis };
         } catch (err) {
             llmError.set(err.message);
             return { success: false, error: err.message };
@@ -147,6 +150,11 @@ export const llmService = {
     // Clear ATS analysis
     clearATS() {
         atsAnalysis.set(null);
+    },
+
+    // Clear inline edit history - NEW
+    clearInlineEditHistory() {
+        inlineEditHistory.set([]);
     },
 
     // Add message to chat history manually
