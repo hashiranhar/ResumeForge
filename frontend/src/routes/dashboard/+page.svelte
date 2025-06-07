@@ -10,17 +10,17 @@
     import Input from '$lib/components/common/Input.svelte';
     import { Plus, FileText, Edit, Trash2, Download, Eye } from 'lucide-svelte';
 
-    // Modal state variables - THESE WERE MISSING!
+    // Modal state variables
     let showTemplateModal = false;
     let showNewCVModal = false;
     let showDeleteModal = false;
     
-    // CV creation variables - THESE WERE MISSING!
+    // CV creation variables
     let selectedTemplate = null;
     let newCVName = '';
     let creatingCV = false;
     
-    // Delete variables - THESE WERE MISSING!
+    // Delete variables
     let cvToDelete = null;
     let deletingCV = false;
 
@@ -50,6 +50,14 @@
         selectedTemplate = template;
         showTemplateModal = false;
         showNewCVModal = true;
+    }
+
+    // FIXED: Added keyboard event handler
+    function handleKeydown(event, callback) {
+        if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            callback();
+        }
     }
 
     async function handleCreateCV() {
@@ -110,7 +118,7 @@
                 showDeleteModal = false;
                 cvToDelete = null;
                 addToast('CV deleted successfully', 'success');
-                await cvService.loadCVs(); // Refresh the list
+                await cvService.loadCVs();
             } else {
                 addToast(result.error || 'Failed to delete CV', 'error');
             }
@@ -126,7 +134,6 @@
             const result = await cvService.generatePDF(cv.id);
             
             if (result.success) {
-                // Create download link
                 const blob = new Blob([result.data], { type: 'application/pdf' });
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
@@ -147,7 +154,6 @@
     }
 </script>
 
-<!-- Rest of your template stays the same -->
 <svelte:head>
     <title>Dashboard - ResumeForge</title>
 </svelte:head>
@@ -238,38 +244,68 @@
     {/if}
 </div>
 
-<!-- Template Selection Modal -->
+<!-- Template Selection Modal - FIXED: Accessibility improvements -->
 <Modal bind:open={showTemplateModal} title="Choose a Template" size="lg">
     <div class="space-y-6">
         <p class="text-gray-600 dark:text-gray-300">
             Start with a professional template or create a blank CV
         </p>
 
-        <!-- Blank option -->
-        <div class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center hover:border-primary-300 dark:hover:border-primary-500 cursor-pointer transition-colors"
-             on:click={handleCreateBlank}>
+        <!-- Blank option - FIXED: Converted to button -->
+        <button
+            type="button"
+            class="w-full border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center hover:border-primary-300 dark:hover:border-primary-500 cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+            on:click={handleCreateBlank}
+            aria-describedby="blank-template-desc"
+        >
             <Plus class="h-12 w-12 text-gray-400 dark:text-gray-500 mx-auto mb-3" />
             <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-1">Start from Blank</h3>
-            <p class="text-gray-600 dark:text-gray-300">Create a CV from scratch with your own content</p>
-        </div>
+            <p class="text-gray-600 dark:text-gray-300" id="blank-template-desc">
+                Create a CV from scratch with your own content
+            </p>
+        </button>
 
-        <!-- Templates -->
+        <!-- Templates - FIXED: Converted to buttons -->
         {#if $templates.length > 0}
-            <div class="grid md:grid-cols-2 gap-4">
-                {#each $templates as template (template.id)}
-                    <div class="border border-gray-200 dark:border-gray-600 rounded-lg p-4 hover:border-primary-300 dark:hover:border-primary-500 cursor-pointer transition-colors"
-                         on:click={() => handleTemplateSelect(template)}>
-                        <h3 class="font-medium text-gray-900 dark:text-white mb-1">{template.name}</h3>
-                        <p class="text-sm text-gray-600 dark:text-gray-300 mb-2">{template.description}</p>
-                        {#if template.is_default === 'true'}
-                            <span class="inline-block bg-primary-100 dark:bg-primary-900 text-primary-800 dark:text-primary-200 text-xs px-2 py-1 rounded">
-                                Recommended
-                            </span>
-                        {/if}
-                    </div>
-                {/each}
+            <div>
+                <h4 class="text-md font-medium text-gray-900 dark:text-white mb-4">
+                    Or choose from a template:
+                </h4>
+                <ul class="grid md:grid-cols-2 gap-4 list-none" aria-label="Available CV templates">
+                    {#each $templates as template (template.id)}
+                        <li>
+                            <button
+                                type="button"
+                                class="border border-gray-200 dark:border-gray-600 rounded-lg p-4 hover:border-primary-300 dark:hover:border-primary-500 cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 text-left w-full"
+                                on:click={() => handleTemplateSelect(template)}
+                                aria-describedby="template-{template.id}-desc"
+                            >
+                                <h3 class="font-medium text-gray-900 dark:text-white mb-1">
+                                    {template.name}
+                                </h3>
+                                <p class="text-sm text-gray-600 dark:text-gray-300 mb-2" id="template-{template.id}-desc">
+                                    {template.description}
+                                </p>
+                                {#if template.is_default === 'true'}
+                                    <span 
+                                        class="inline-block bg-primary-100 dark:bg-primary-900 text-primary-800 dark:text-primary-200 text-xs px-2 py-1 rounded"
+                                        aria-label="Recommended template"
+                                    >
+                                        Recommended
+                                    </span>
+                                {/if}
+                            </button>
+                        </li>
+                    {/each}
+                </ul>
             </div>
         {/if}
+    </div>
+
+    <div slot="footer" class="flex justify-end space-x-3">
+        <Button variant="outline" on:click={() => showTemplateModal = false}>
+            Cancel
+        </Button>
     </div>
 </Modal>
 
