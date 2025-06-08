@@ -15,6 +15,7 @@
     export let onSave = () => {};
     export let saving = false;
 
+    // FIXED: Set default tab based on demo mode
     let activeTab = 'editor';
     let showSettings = false;
     let leftPanelWidth = 50;
@@ -26,6 +27,11 @@
 
     // Calculate main content width when settings panel is open
     $: mainContentWidth = showSettings ? `calc(100% - ${settingsPanelWidth}px)` : '100%';
+
+    // FIXED: Ensure activeTab is valid for demo mode
+    $: if (isDemo && ['inline-edit', 'chat', 'ats'].includes(activeTab)) {
+        activeTab = 'editor';
+    }
 
     // Resize functionality
     function handleMouseDown(event) {
@@ -76,19 +82,56 @@
         }
     }
 
-    // Manual save function
-    async function handleManualSave() {
-        if (saving) return;
-        
+    // FIXED: Demo-specific download functions
+    async function handleDemoDownloadPDF() {
+        if (!$draftCV.markdown_content?.trim()) {
+            addToast('Please add some content first', 'info');
+            return;
+        }
+
+        downloadingPDF = true;
         try {
-            await onSave();
-            addToast('CV saved successfully!', 'success');
+            // For demo, show what would happen
+            addToast('Demo mode - sign up to download actual PDFs with professional formatting!', 'info');
+            
+            // Simulate processing time
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            addToast('Create a free account to unlock PDF downloads and premium templates!', 'success');
         } catch (error) {
-            addToast('Failed to save CV', 'error');
+            addToast('Demo download simulation failed', 'error');
+        } finally {
+            downloadingPDF = false;
         }
     }
 
-    // Download functionality
+    async function handleDemoDownloadMarkdown() {
+        if (!$draftCV.markdown_content?.trim()) {
+            addToast('Please add some content first', 'info');
+            return;
+        }
+
+        downloadingMarkdown = true;
+        try {
+            // Create and download the markdown file
+            const blob = new Blob([$draftCV.markdown_content], { type: 'text/markdown' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${$draftCV.name || 'demo-cv'}.md`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            
+            addToast('Markdown file downloaded! Sign up for PDF exports and more features.', 'success');
+        } catch (error) {
+            addToast('Failed to download markdown', 'error');
+        } finally {
+            downloadingMarkdown = false;
+        }
+    }
+
+    // Regular download functions for authenticated users
     async function handleDownloadPDF() {
         if (!$currentCV) {
             addToast('Please save your CV first', 'info');
@@ -131,32 +174,17 @@
         }
     }
 
-    // Keyboard shortcuts
-    function handleKeyPress(event) {
-        // Ctrl/Cmd + S to save
-        if ((event.ctrlKey || event.metaKey) && event.key === 's') {
-            event.preventDefault();
-            if (!saving && ($hasUnsavedChanges || isDemo)) {
-                handleManualSave();
+    // Manual save function
+    async function handleManualSave() {
+        if (saving) return;
+        
+        try {
+            await onSave();
+            if (!isDemo) {
+                addToast('CV saved successfully!', 'success');
             }
-        }
-        
-        // Ctrl/Cmd + Shift + P for PDF download
-        if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === 'P') {
-            event.preventDefault();
-            handleDownloadPDF();
-        }
-        
-        // Ctrl/Cmd + Shift + M for Markdown download
-        if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === 'M') {
-            event.preventDefault();
-            handleDownloadMarkdown();
-        }
-        
-        // ESC to close settings panel
-        if (event.key === 'Escape' && showSettings) {
-            event.preventDefault();
-            closeSettings();
+        } catch (error) {
+            addToast('Failed to save CV', 'error');
         }
     }
 
@@ -169,18 +197,60 @@
                     activeTab = 'editor';
                     break;
                 case '2':
-                    event.preventDefault();
-                    activeTab = 'inline-edit';
+                    if (!isDemo) { // Only allow in non-demo mode
+                        event.preventDefault();
+                        activeTab = 'inline-edit';
+                    }
                     break;
                 case '3':
-                    event.preventDefault();
-                    activeTab = 'chat';
+                    if (!isDemo) { // Only allow in non-demo mode
+                        event.preventDefault();
+                        activeTab = 'chat';
+                    }
                     break;
                 case '4':
-                    event.preventDefault();
-                    activeTab = 'ats';
+                    if (!isDemo) { // Only allow in non-demo mode
+                        event.preventDefault();
+                        activeTab = 'ats';
+                    }
                     break;
             }
+        }
+    }
+
+    // Keyboard shortcuts
+    function handleKeyPress(event) {
+        // Ctrl/Cmd + S to save
+        if ((event.ctrlKey || event.metaKey) && event.key === 's') {
+            event.preventDefault();
+            if (!saving && ($hasUnsavedChanges || isDemo)) {
+                handleManualSave();
+            }
+        }
+        
+        // Download shortcuts
+        if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === 'P') {
+            event.preventDefault();
+            if (isDemo) {
+                handleDemoDownloadPDF();
+            } else {
+                handleDownloadPDF();
+            }
+        }
+        
+        if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === 'M') {
+            event.preventDefault();
+            if (isDemo) {
+                handleDemoDownloadMarkdown();
+            } else {
+                handleDownloadMarkdown();
+            }
+        }
+        
+        // ESC to close settings panel
+        if (event.key === 'Escape' && showSettings) {
+            event.preventDefault();
+            closeSettings();
         }
     }
 
@@ -210,7 +280,7 @@
         <!-- Toolbar -->
         <div class="flex-shrink-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-4 py-3">
             <div class="flex items-center justify-between">
-                <!-- Left: Tabs -->
+                <!-- Left: Tabs - FIXED: Hide AI tabs in demo mode -->
                 <div class="flex items-center space-x-1" role="tablist" aria-label="Editor sections">
                     <button
                         class="px-3 py-2 rounded-lg text-sm font-medium transition-colors {activeTab === 'editor' 
@@ -226,47 +296,50 @@
                         Editor
                     </button>
                     
-                    <button
-                        class="px-3 py-2 rounded-lg text-sm font-medium transition-colors {activeTab === 'inline-edit' 
-                            ? 'bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300' 
-                            : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800'}"
-                        on:click={() => activeTab = 'inline-edit'}
-                        role="tab"
-                        aria-selected={activeTab === 'inline-edit'}
-                        aria-controls="inline-edit-panel"
-                        title="Switch to AI inline editor (Ctrl+2)"
-                    >
-                        <Wand2 class="h-4 w-4 mr-1 inline" />
-                        AI Edit
-                    </button>
-                    
-                    <button
-                        class="px-3 py-2 rounded-lg text-sm font-medium transition-colors {activeTab === 'chat' 
-                            ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300' 
-                            : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800'}"
-                        on:click={() => activeTab = 'chat'}
-                        role="tab"
-                        aria-selected={activeTab === 'chat'}
-                        aria-controls="chat-panel"
-                        title="Switch to AI chat assistant (Ctrl+3)"
-                    >
-                        <MessageSquare class="h-4 w-4 mr-1 inline" />
-                        AI Chat
-                    </button>
-                    
-                    <button
-                        class="px-3 py-2 rounded-lg text-sm font-medium transition-colors {activeTab === 'ats' 
-                            ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300' 
-                            : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800'}"
-                        on:click={() => activeTab = 'ats'}
-                        role="tab"
-                        aria-selected={activeTab === 'ats'}
-                        aria-controls="ats-panel"
-                        title="Switch to ATS score analysis (Ctrl+4)"
-                    >
-                        <Zap class="h-4 w-4 mr-1 inline" />
-                        ATS Score
-                    </button>
+                    <!-- FIXED: Only show AI features for non-demo users -->
+                    {#if !isDemo}
+                        <button
+                            class="px-3 py-2 rounded-lg text-sm font-medium transition-colors {activeTab === 'inline-edit' 
+                                ? 'bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300' 
+                                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800'}"
+                            on:click={() => activeTab = 'inline-edit'}
+                            role="tab"
+                            aria-selected={activeTab === 'inline-edit'}
+                            aria-controls="inline-edit-panel"
+                            title="Switch to AI inline editor (Ctrl+2)"
+                        >
+                            <Wand2 class="h-4 w-4 mr-1 inline" />
+                            AI Edit
+                        </button>
+                        
+                        <button
+                            class="px-3 py-2 rounded-lg text-sm font-medium transition-colors {activeTab === 'chat' 
+                                ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300' 
+                                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800'}"
+                            on:click={() => activeTab = 'chat'}
+                            role="tab"
+                            aria-selected={activeTab === 'chat'}
+                            aria-controls="chat-panel"
+                            title="Switch to AI chat assistant (Ctrl+3)"
+                        >
+                            <MessageSquare class="h-4 w-4 mr-1 inline" />
+                            AI Chat
+                        </button>
+                        
+                        <button
+                            class="px-3 py-2 rounded-lg text-sm font-medium transition-colors {activeTab === 'ats' 
+                                ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300' 
+                                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800'}"
+                            on:click={() => activeTab = 'ats'}
+                            role="tab"
+                            aria-selected={activeTab === 'ats'}
+                            aria-controls="ats-panel"
+                            title="Switch to ATS score analysis (Ctrl+4)"
+                        >
+                            <Zap class="h-4 w-4 mr-1 inline" />
+                            ATS Score
+                        </button>
+                    {/if}
                 </div>
 
                 <!-- Right: Action buttons -->
@@ -279,10 +352,37 @@
                         </div>
                     {/if}
 
-                    <!-- Download buttons -->
-                    {#if $currentCV && !isDemo}
+                    <!-- FIXED: Demo gets download buttons, authenticated users get download only if CV is saved -->
+                    {#if isDemo}
+                        <!-- Demo download buttons -->
                         <div class="flex items-center space-x-1">
-                            <!-- Download PDF -->
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                on:click={handleDemoDownloadPDF}
+                                loading={downloadingPDF}
+                                disabled={downloadingPDF || downloadingMarkdown}
+                                title="Download as PDF (Demo)"
+                            >
+                                <Download class="h-4 w-4 mr-1" />
+                                PDF
+                            </Button>
+
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                on:click={handleDemoDownloadMarkdown}
+                                loading={downloadingMarkdown}
+                                disabled={downloadingPDF || downloadingMarkdown}
+                                title="Download as Markdown (Ctrl+Shift+M)"
+                            >
+                                <FileText class="h-4 w-4 mr-1" />
+                                Markdown
+                            </Button>
+                        </div>
+                    {:else if $currentCV}
+                        <!-- Authenticated user download buttons (only if CV is saved) -->
+                        <div class="flex items-center space-x-1">
                             <Button
                                 variant="outline"
                                 size="sm"
@@ -295,7 +395,6 @@
                                 PDF
                             </Button>
 
-                            <!-- Download Markdown -->
                             <Button
                                 variant="outline"
                                 size="sm"
@@ -323,13 +422,13 @@
                         Settings
                     </Button>
                     
-                    <!-- Manual save button only -->
+                    <!-- Save button -->
                     <Button
                         size="sm"
                         on:click={handleManualSave}
                         loading={saving}
                         disabled={saving || (!$hasUnsavedChanges && !isDemo)}
-                        title={isDemo ? 'Save your CV' : saving ? 'Saving...' : 'Save changes (Ctrl+S)'}
+                        title={isDemo ? 'Save your CV (create account)' : saving ? 'Saving...' : 'Save changes (Ctrl+S)'}
                     >
                         <Save class="h-4 w-4 mr-1" />
                         {isDemo ? 'Save CV' : saving ? 'Saving...' : 'Save'}
@@ -349,15 +448,15 @@
                     <div id="editor-panel" role="tabpanel" aria-labelledby="editor-tab" class="h-full">
                         <MarkdownEditor />
                     </div>
-                {:else if activeTab === 'inline-edit'}
+                {:else if activeTab === 'inline-edit' && !isDemo}
                     <div id="inline-edit-panel" role="tabpanel" aria-labelledby="inline-edit-tab" class="h-full">
                         <InlineEditPanel />
                     </div>
-                {:else if activeTab === 'chat'}
+                {:else if activeTab === 'chat' && !isDemo}
                     <div id="chat-panel" role="tabpanel" aria-labelledby="chat-tab" class="h-full">
                         <ChatPanel />
                     </div>
-                {:else if activeTab === 'ats'}
+                {:else if activeTab === 'ats' && !isDemo}
                     <div id="ats-panel" role="tabpanel" aria-labelledby="ats-tab" class="h-full">
                         <ATSPanel />
                     </div>
@@ -425,6 +524,13 @@
                     <div class="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
                     Changes are applied in real-time
                 </div>
+                
+                <!-- FIXED: Add demo notice in settings footer -->
+                {#if isDemo}
+                    <div class="mt-2 p-2 bg-blue-50 dark:bg-blue-900 border border-blue-200 dark:border-blue-700 rounded text-xs text-blue-800 dark:text-blue-200">
+                        <strong>Demo Mode:</strong> Sign up to save your settings and unlock AI features!
+                    </div>
+                {/if}
             </div>
         </div>
 
