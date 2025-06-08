@@ -6,8 +6,8 @@ export const chatHistory = writable([]);
 export const isLLMLoading = writable(false);
 export const llmError = writable(null);
 export const atsAnalysis = writable(null);
-export const inlineEditHistory = writable([]); // NEW: Track inline edit history
-export const isInlineEditing = writable(false); // NEW: Separate loading state for inline edits
+export const inlineEditHistory = writable([]);
+export const isInlineEditing = writable(false);
 
 // LLM service functions
 export const llmService = {
@@ -58,7 +58,7 @@ export const llmService = {
         }
     },
 
-    // Function 2: Inline edit CV content - NEW IMPLEMENTATION
+    // Function 2: Inline edit CV content
     async inlineEdit(cvId, instruction, section = null, autoSave = true) {
         isInlineEditing.set(true);
         llmError.set(null);
@@ -107,13 +107,15 @@ export const llmService = {
         }
     },
 
-    // Function 3: ATS Score Analysis
+    // FIXED: Function 3: ATS Score Analysis
     async analyzeATS(cvId, cvContent, targetRole, jobDescription) {
         isLLMLoading.set(true);
         llmError.set(null);
         
         try {
-            const response = await authenticatedFetch('/api/llm/ats-analysis', {
+            console.log('Starting ATS analysis...', { cvId, hasContent: !!cvContent, targetRole, hasJobDescription: !!jobDescription });
+            
+            const response = await authenticatedFetch('/api/llm/ats-score', {
                 method: 'POST',
                 body: JSON.stringify({
                     cv_id: cvId,
@@ -123,18 +125,34 @@ export const llmService = {
                 })
             });
             
+            console.log('ATS API response status:', response.status);
+            
             if (!response.ok) {
                 const errorData = await response.json();
+                console.error('ATS API error:', errorData);
                 throw new Error(errorData.detail || 'ATS analysis failed');
             }
             
             const data = await response.json();
+            console.log('ATS API response data:', data);
             
-            // Update ATS analysis store
-            atsAnalysis.set(data.analysis);
+            // FIXED: Set the ATS analysis data directly from the response
+            // The backend returns the analysis data directly, not nested under 'analysis'
+            const analysisData = {
+                ats_score: data.ats_score,
+                score_breakdown: data.score_breakdown,
+                strengths: data.strengths,
+                weaknesses: data.weaknesses,
+                upgrade_suggestions: data.upgrade_suggestions,
+                keyword_analysis: data.keyword_analysis
+            };
             
-            return { success: true, analysis: data.analysis };
+            console.log('Setting ATS analysis data:', analysisData);
+            atsAnalysis.set(analysisData);
+            
+            return { success: true, analysis: analysisData };
         } catch (err) {
+            console.error('ATS analysis error:', err);
             llmError.set(err.message);
             return { success: false, error: err.message };
         } finally {
@@ -152,7 +170,7 @@ export const llmService = {
         atsAnalysis.set(null);
     },
 
-    // Clear inline edit history - NEW
+    // Clear inline edit history
     clearInlineEditHistory() {
         inlineEditHistory.set([]);
     },
