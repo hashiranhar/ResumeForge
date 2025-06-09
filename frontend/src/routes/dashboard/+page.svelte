@@ -132,19 +132,9 @@
 
     async function handleDownloadPDF(cv) {
         try {
-            const result = await cvService.generatePDF(cv.id);
+            const result = await cvService.downloadPDF(cv.id, `${cv.name}.pdf`);
             
             if (result.success) {
-                const blob = new Blob([result.data], { type: 'application/pdf' });
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `${cv.name}.pdf`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                window.URL.revokeObjectURL(url);
-                
                 addToast('PDF downloaded successfully', 'success');
             } else {
                 addToast(result.error || 'Failed to generate PDF', 'error');
