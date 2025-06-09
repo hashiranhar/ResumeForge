@@ -1,6 +1,7 @@
 <script>
     import { onMount } from 'svelte';
     import { goto } from '$app/navigation';
+    import { browser } from '$app/environment';
     import { isAuthenticated, user } from '$lib/stores/auth.js';
     import { cvs, templates, cvService, isLoading } from '$lib/stores/cv.js';
     import { addToast } from '$lib/stores/toast.js';
@@ -24,8 +25,8 @@
     let cvToDelete = null;
     let deletingCV = false;
 
-    // Redirect if not authenticated
-    $: if (!$isAuthenticated) {
+    // Redirect if not authenticated (with browser check)
+    $: if (browser && !$isAuthenticated) {
         goto('/auth/login');
     }
 
@@ -244,14 +245,19 @@
     {/if}
 </div>
 
-<!-- Template Selection Modal - FIXED: Accessibility improvements -->
-<Modal bind:open={showTemplateModal} title="Choose a Template" size="lg">
+<!-- Template Selection Modal -->
+<Modal 
+    bind:open={showTemplateModal} 
+    title="Choose a Template" 
+    size="lg"
+    close={() => showTemplateModal = false}
+>
     <div class="space-y-6">
         <p class="text-gray-600 dark:text-gray-300">
             Start with a professional template or create a blank CV
         </p>
 
-        <!-- Blank option - FIXED: Converted to button -->
+        <!-- Blank option -->
         <button
             type="button"
             class="w-full border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center hover:border-primary-300 dark:hover:border-primary-500 cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
@@ -265,7 +271,7 @@
             </p>
         </button>
 
-        <!-- Templates - FIXED: Converted to buttons -->
+        <!-- Templates -->
         {#if $templates.length > 0}
             <div>
                 <h4 class="text-md font-medium text-gray-900 dark:text-white mb-4">
@@ -301,16 +307,14 @@
             </div>
         {/if}
     </div>
-
-    <div slot="footer" class="flex justify-end space-x-3">
-        <Button variant="outline" on:click={() => showTemplateModal = false}>
-            Cancel
-        </Button>
-    </div>
 </Modal>
 
 <!-- New CV Modal -->
-<Modal bind:open={showNewCVModal} title="Create New CV">
+<Modal 
+    bind:open={showNewCVModal} 
+    title="Create New CV"
+    close={() => showNewCVModal = false}
+>
     <div class="space-y-4">
         {#if selectedTemplate}
             <div class="bg-blue-50 dark:bg-blue-900 border border-blue-200 dark:border-blue-700 rounded-lg p-4">
@@ -328,10 +332,7 @@
         />
     </div>
 
-    <div slot="footer" class="flex justify-end space-x-3">
-        <Button variant="outline" on:click={() => showNewCVModal = false}>
-            Cancel
-        </Button>
+    <div slot="footer" class="flex justify-end">
         <Button 
             on:click={handleCreateCV}
             loading={creatingCV}
