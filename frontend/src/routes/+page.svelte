@@ -131,18 +131,4 @@
         </div>
     </div>
 
-    <!-- CTA Section -->
-    <div class="py-20 bg-primary-600 dark:bg-gray-800">
-        <div class="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
-            <h2 class="text-3xl font-bold text-white mb-4">
-                Ready to create your perfect CV?
-            </h2>
-            <p class="text-xl text-primary-100 dark:text-gray-300 mb-8">
-                Join thousands of professionals who have already built their careers with ResumeForge
-            </p>
-            <Button size="lg" variant="secondary" on:click={handleGetStarted}>
-                Get Started Now - It's Free
-            </Button>
-        </div>
-    </div>
 </div>
