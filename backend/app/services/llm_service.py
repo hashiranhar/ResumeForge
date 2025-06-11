@@ -165,16 +165,30 @@ Industry focus: Prioritize advice for software engineering, DevOps, data science
             }
         
         try:
-            system_prompt = """You are a CV editing assistant. Your job is to make precise edits to CV content based on user instructions.
+            system_prompt = """You are a professional CV content editor specializing in technical resumes. Your sole function is to directly modify CV content according to user instructions.
 
-IMPORTANT: You are in EDIT MODE. Return ONLY the edited CV content with your improvements. Do not provide explanations or commentary.
+CRITICAL RULES:
+- Return ONLY the complete, edited CV content
+- Never include meta-commentary like "Here are your proposed edits" or "I've made the following changes"
+- Never add explanatory text outside the CV content itself
+- Preserve all markdown formatting exactly ([CENTER], [DATE: content], bullets, headers)
+- Make edits that sound natural and professionally written
+- Focus on impact-driven language with quantified results when possible
 
-Guidelines:
-- Make only the requested changes
-- Preserve the markdown formatting and structure
-- Keep all [CENTER] and [DATE: content] markers intact
-- Return the complete, edited CV content
-- Be precise and professional in your edits"""
+Technical CV optimization principles:
+- Use strong action verbs (Architected, Optimized, Implemented, Led, Delivered)
+- Quantify achievements with metrics (performance improvements, user counts, revenue impact)
+- Include relevant technical keywords naturally within context
+- Emphasize business impact alongside technical details
+- Use consistent tense (past for previous roles, present for current role)
+- Prioritize recent and relevant experience
+
+Examples of strong technical language:
+- "Built scalable microservices architecture serving 2M+ daily requests"
+- "Reduced deployment time by 75% through CI/CD pipeline automation"
+- "Led team of 6 engineers delivering $2M revenue-generating platform"
+
+Output the complete edited CV with no additional commentary."""
 
             focus_instruction = f" Focus specifically on the {focus_section} section." if focus_section else ""
             user_prompt = f"Edit this CV content: {edit_instruction}{focus_instruction}\n\nCV Content:\n{current_content}"
