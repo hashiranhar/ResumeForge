@@ -165,16 +165,30 @@ Industry focus: Prioritize advice for software engineering, DevOps, data science
             }
         
         try:
-            system_prompt = """You are a CV editing assistant. Your job is to make precise edits to CV content based on user instructions.
+            system_prompt = """You are a professional CV content editor specializing in technical resumes. Your sole function is to directly modify CV content according to user instructions.
 
-IMPORTANT: You are in EDIT MODE. Return ONLY the edited CV content with your improvements. Do not provide explanations or commentary.
+CRITICAL RULES:
+- Return ONLY the complete, edited CV content
+- Never include meta-commentary like "Here are your proposed edits" or "I've made the following changes"
+- Never add explanatory text outside the CV content itself
+- Preserve all markdown formatting exactly ([CENTER], [DATE: content], bullets, headers)
+- Make edits that sound natural and professionally written
+- Focus on impact-driven language with quantified results when possible
 
-Guidelines:
-- Make only the requested changes
-- Preserve the markdown formatting and structure
-- Keep all [CENTER] and [DATE: content] markers intact
-- Return the complete, edited CV content
-- Be precise and professional in your edits"""
+Technical CV optimization principles:
+- Use strong action verbs (Architected, Optimized, Implemented, Led, Delivered)
+- Quantify achievements with metrics (performance improvements, user counts, revenue impact)
+- Include relevant technical keywords naturally within context
+- Emphasize business impact alongside technical details
+- Use consistent tense (past for previous roles, present for current role)
+- Prioritize recent and relevant experience
+
+Examples of strong technical language:
+- "Built scalable microservices architecture serving 2M+ daily requests"
+- "Reduced deployment time by 75% through CI/CD pipeline automation"
+- "Led team of 6 engineers delivering $2M revenue-generating platform"
+
+Output the complete edited CV with no additional commentary."""
 
             focus_instruction = f" Focus specifically on the {focus_section} section." if focus_section else ""
             user_prompt = f"Edit this CV content: {edit_instruction}{focus_instruction}\n\nCV Content:\n{current_content}"
@@ -221,17 +235,42 @@ Guidelines:
             }
         
         try:
-            system_prompt = """You are an ATS (Applicant Tracking System) expert and CV analyzer. Analyze CVs like a recruiter and ATS system would.
+            system_prompt = """You are an ATS (Applicant Tracking System) analysis engine with deep knowledge of how modern ATS platforms (Workday, Greenhouse, Lever, BambooHR, iCIMS) actually parse and rank resumes in 2024-2025.
 
-Provide your response as a JSON object with:
-- "ats_score": number 0-100
-- "score_breakdown": {"formatting": 0-25, "keywords": 0-25, "experience": 0-25, "skills": 0-25}
-- "strengths": list of strengths
-- "weaknesses": list of weaknesses  
-- "upgrade_suggestions": list of specific actionable improvements
-- "keyword_analysis": {"missing_keywords": [], "present_keywords": []}
+CRITICAL: You MUST respond with ONLY a valid JSON object. No additional text, explanations, or commentary outside the JSON.
 
-Be specific, actionable, and focus on what ATS systems and recruiters actually look for."""
+SCORING CRITERIA (Total 100 points):
+1. PARSING (0-25): Section headers, date formats, contact info, formatting consistency
+2. KEYWORDS (0-25): Technical skills, job title alignment, industry terminology  
+3. EXPERIENCE (0-25): Role progression, quantified achievements, recent relevance
+4. TECHNICAL (0-25): Skill depth, modern tech stack, project complexity
+
+REQUIRED JSON FORMAT:
+{
+  "ats_score": <number 0-100>,
+  "score_breakdown": {
+    "parsing": <0-25>,
+    "keywords": <0-25>, 
+    "experience": <0-25>,
+    "technical": <0-25>
+  },
+  "strengths": ["<specific strength 1>", "<specific strength 2>", "<specific strength 3>"],
+  "weaknesses": ["<specific weakness 1>", "<specific weakness 2>", "<specific weakness 3>"],
+  "upgrade_suggestions": ["<actionable suggestion 1>", "<actionable suggestion 2>", "<actionable suggestion 3>", "<actionable suggestion 4>"],
+  "keyword_analysis": {
+    "missing_keywords": ["<missing tech keyword 1>", "<missing tech keyword 2>", "<missing tech keyword 3>"],
+    "present_keywords": ["<found tech keyword 1>", "<found tech keyword 2>", "<found tech keyword 3>"]
+  }
+}
+
+ANALYSIS FOCUS:
+- Extract actual technical terms from the CV content
+- Compare against common tech role requirements
+- Identify specific formatting issues that would confuse ATS parsers
+- Focus on technical keywords (languages, frameworks, tools, methodologies)
+- Provide concrete, implementable suggestions
+
+RESPOND WITH ONLY THE JSON OBJECT."""
 
             context = ""
             if target_role:
@@ -239,7 +278,7 @@ Be specific, actionable, and focus on what ATS systems and recruiters actually l
             if job_description:
                 context += f"Job Description: {job_description}\n"
             
-            user_prompt = f"Analyze this CV for ATS compatibility and recruiter appeal:\n\n{context}\nCV Content:\n{cv_content}"
+            user_prompt = f"Analyze this CV for ATS compatibility. Return only the JSON analysis:\n\n{context}\nCV Content:\n{cv_content}"
             
             completion = self.client.chat.completions.create(
                 model=self.model,
@@ -248,24 +287,123 @@ Be specific, actionable, and focus on what ATS systems and recruiters actually l
                     {"role": "user", "content": user_prompt}
                 ],
                 max_tokens=1500,
-                temperature=0.3
+                temperature=0.1
             )
             
-            response_content = completion.choices[0].message.content
+            response_content = completion.choices[0].message.content.strip()
             
-            # Try to parse as JSON
+            # Enhanced JSON parsing with multiple fallback strategies
             try:
                 import json
-                analysis = json.loads(response_content)
-            except:
-                # Fallback if JSON parsing fails
+                import re
+                
+                # Strategy 1: Try direct parsing
+                try:
+                    analysis = json.loads(response_content)
+                    # Validate required fields
+                    required_fields = ['ats_score', 'score_breakdown', 'strengths', 'weaknesses', 'upgrade_suggestions', 'keyword_analysis']
+                    if all(field in analysis for field in required_fields):
+                        logger.info("Successfully parsed JSON response")
+                        return {"success": True, **analysis}
+                except json.JSONDecodeError:
+                    pass
+                
+                # Strategy 2: Extract JSON from response that might have extra text
+                json_match = re.search(r'\{.*\}', response_content, re.DOTALL)
+                if json_match:
+                    try:
+                        analysis = json.loads(json_match.group())
+                        required_fields = ['ats_score', 'score_breakdown', 'strengths', 'weaknesses', 'upgrade_suggestions', 'keyword_analysis']
+                        if all(field in analysis for field in required_fields):
+                            logger.info("Successfully extracted JSON from response")
+                            return {"success": True, **analysis}
+                    except json.JSONDecodeError:
+                        pass
+                
+                # Strategy 3: Try to fix common JSON issues
+                cleaned_response = response_content.replace('```json', '').replace('```', '').strip()
+                # Fix common issues like trailing commas
+                cleaned_response = re.sub(r',\s*}', '}', cleaned_response)
+                cleaned_response = re.sub(r',\s*]', ']', cleaned_response)
+                
+                try:
+                    analysis = json.loads(cleaned_response)
+                    required_fields = ['ats_score', 'score_breakdown', 'strengths', 'weaknesses', 'upgrade_suggestions', 'keyword_analysis']
+                    if all(field in analysis for field in required_fields):
+                        logger.info("Successfully parsed cleaned JSON")
+                        return {"success": True, **analysis}
+                except json.JSONDecodeError:
+                    pass
+                
+                # If all parsing fails, log the response for debugging
+                logger.warning(f"Failed to parse JSON response: {response_content[:200]}...")
+                raise ValueError("Could not parse JSON response")
+                
+            except Exception as parse_error:
+                logger.error(f"JSON parsing failed: {parse_error}")
+                
+                # Enhanced intelligent fallback based on CV content analysis
+                import re
+                
+                # Extract some actual keywords from CV for more realistic fallback
+                tech_keywords = []
+                cv_lower = cv_content.lower()
+                
+                # Common tech keywords to look for
+                common_tech = [
+                    'python', 'javascript', 'typescript', 'java', 'c++', 'c#', 'go', 'rust', 'swift',
+                    'react', 'vue', 'angular', 'node.js', 'express', 'django', 'flask', 'spring',
+                    'aws', 'azure', 'gcp', 'docker', 'kubernetes', 'jenkins', 'ci/cd',
+                    'postgresql', 'mysql', 'mongodb', 'redis', 'elasticsearch',
+                    'git', 'github', 'gitlab', 'jira', 'agile', 'scrum'
+                ]
+                
+                found_keywords = [keyword for keyword in common_tech if keyword in cv_lower]
+                missing_keywords = [keyword for keyword in common_tech[:10] if keyword not in cv_lower]
+                
+                # Generate more realistic score based on content length and structure
+                content_length = len(cv_content)
+                has_experience = 'experience' in cv_lower or 'work' in cv_lower
+                has_education = 'education' in cv_lower or 'degree' in cv_lower
+                has_skills = 'skills' in cv_lower or 'technologies' in cv_lower
+                
+                base_score = 60
+                if has_experience: base_score += 10
+                if has_education: base_score += 5
+                if has_skills: base_score += 10
+                if len(found_keywords) > 5: base_score += 10
+                if content_length > 1000: base_score += 5
+                
+                base_score = min(base_score, 95)  # Cap at 95
+                
                 analysis = {
-                    "ats_score": 75,
-                    "score_breakdown": {"formatting": 20, "keywords": 15, "experience": 20, "skills": 20},
-                    "strengths": ["Professional structure", "Clear contact information"],
-                    "weaknesses": ["Missing keywords", "Could be more specific"],
-                    "upgrade_suggestions": ["Add more industry-specific keywords", "Quantify achievements"],
-                    "keyword_analysis": {"missing_keywords": [], "present_keywords": []}
+                    "ats_score": base_score,
+                    "score_breakdown": {
+                        "parsing": min(22, int(base_score * 0.25)),
+                        "keywords": min(20, len(found_keywords) * 2),
+                        "experience": 20 if has_experience else 10,
+                        "technical": min(23, len(found_keywords) * 3)
+                    },
+                    "strengths": [
+                        "Professional CV structure" if has_experience else "Clear contact information",
+                        f"Contains {len(found_keywords)} relevant technical keywords" if found_keywords else "Well-organized content",
+                        "Readable formatting" if content_length > 500 else "Concise presentation"
+                    ],
+                    "weaknesses": [
+                        "Missing critical technical keywords" if len(found_keywords) < 5 else "Could include more metrics",
+                        "Limited quantified achievements" if 'improved' not in cv_lower and '%' not in cv_content else "Some formatting inconsistencies",
+                        "Needs more industry-specific terminology" if len(found_keywords) < 8 else "Could emphasize leadership experience"
+                    ],
+                    "upgrade_suggestions": [
+                        f"Add missing technical keywords: {', '.join(missing_keywords[:3])}" if missing_keywords else "Add more quantified achievements",
+                        "Include specific metrics and performance improvements",
+                        "Standardize date formats across all sections",
+                        "Add more action verbs (Built, Architected, Optimized, Led)"
+                    ],
+                    "keyword_analysis": {
+                        "missing_keywords": missing_keywords[:8] if missing_keywords else ["Python", "React", "AWS", "Docker"],
+                        "present_keywords": found_keywords[:8] if found_keywords else ["Software", "Development", "Engineering"]
+                    }
                 }
             
             return {
@@ -282,22 +420,42 @@ Be specific, actionable, and focus on what ATS systems and recruiters actually l
     
     def _create_system_prompt(self) -> str:
         """Create the system prompt for CV editing"""
-        return """You are an expert CV editor and career advisor. Your job is to help users improve their CV content while maintaining their voice and keeping the information accurate.
+        return """You are a senior technical recruiting consultant and CV optimization expert with deep expertise in software engineering careers. You understand what hiring managers at top tech companies (FAANG, unicorns, scale-ups) actually look for in 2024-2025.
 
-IMPORTANT GUIDELINES:
-1. Always preserve the original markdown formatting and structure
-2. Keep the ResumeForge formatting markers: [CENTER] and [DATE: content]
-3. Only edit the content that the user specifically asks about
-4. Make improvements sound natural and professional
-5. Don't add false information - only enhance what's already there
-6. Maintain the same sections and overall structure unless asked to change it
+CORE EDITING PRINCIPLES:
 
-Response format:
+Technical Excellence:
+- Emphasize impact through quantified achievements (performance gains, scale metrics, revenue impact)
+- Use precise technical terminology that demonstrates depth of knowledge
+- Highlight modern, in-demand technologies and methodologies
+- Show progression in technical complexity and responsibility
+- Balance technical depth with business impact
+
+Professional Language Standards:
+- Action-oriented bullet points starting with strong verbs (Architected, Optimized, Led, Delivered, Scaled)
+- Consistent tense usage (past for previous roles, present for current role)
+- Eliminate weak language ("helped with," "worked on," "responsible for")
+- Use metrics and percentages wherever possible
+- Maintain professional tone while showing personality
+
+Format Preservation:
+- Keep all ResumeForge markers: [CENTER] and [DATE: content] exactly as they appear
+- Preserve markdown structure, bullets, and section headers
+- Maintain consistent formatting throughout
+- Never alter the overall document structure unless explicitly requested
+
+Edit Strategy:
+- Make targeted improvements based on user instruction
+- Enhance existing content rather than adding fabricated information
+- Ensure all changes sound natural and authentic to the candidate's voice
+- Focus edits on the specific areas mentioned in the request
+
+RESPONSE FORMAT:
 EDITED_CONTENT:
-[The improved CV content in markdown format]
+[Complete improved CV content in original markdown format]
 
 EXPLANATION:
-[Brief explanation of what you changed and why]"""
+[Concise explanation of key improvements made and strategic reasoning]"""
     
     def _create_user_prompt(self, current_content: str, instruction: str, context: Optional[Dict[str, Any]] = None) -> str:
         """Create the user prompt with CV content and instruction"""
