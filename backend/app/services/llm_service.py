@@ -501,6 +501,154 @@ Please edit the content according to my instruction while following your guideli
                 "content": response.strip(),
                 "explanation": "Content has been processed."
             }
+        
+    def pdf_to_markdown(self, pdf_text: str, user_preferences: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """
+        Function 4: Convert PDF resume text to structured markdown
+        """
+        if not self.client:
+            return {
+                "success": False,
+                "error": "LLM service not available",
+                "markdown": ""
+            }
+        
+        try:
+            system_prompt = """You are a professional resume parser specializing in converting PDF resume text into clean, ATS-friendly markdown format optimized for ResumeForge.
+
+    CRITICAL: You MUST respond with ONLY the markdown content. No explanations, no additional text, no code blocks.
+
+    CONVERSION RULES:
+    1. STRUCTURE: Use standard resume sections with proper hierarchy
+    2. FORMATTING: Use ResumeForge special markers and proper markdown
+    3. DATES: Standardize all dates to "Month YYYY - Month YYYY" or "Month YYYY - Present"
+    4. CONTACT: Use ResumeForge [CENTER] marker for contact information
+    5. EXPERIENCE: Use format "### Job Title | Company | [DATE: Month YYYY - Month YYYY]"
+    6. ACHIEVEMENTS: Convert to bullet points with quantified results when possible
+    7. CLEAN: Remove PDF artifacts, weird spacing, or parsing errors
+    8. PRESERVE: Keep all important information from original text
+
+    RESUMEFORGE MARKDOWN TEMPLATE:
+    # [Full Name]
+    **[Professional Title]** [CENTER]
+
+    📧 [email] | 📱 [phone] | 🌐 [linkedin] | 📍 [location] [CENTER]
+
+    ## Professional Summary
+    [2-3 line summary highlighting key qualifications and value proposition]
+
+    ## Experience
+    ### [Job Title] | [Company] | [DATE: Month YYYY - Month YYYY]
+    - [Achievement with quantified impact - numbers, percentages, scale]
+    - [Key responsibility with specific technologies and methodologies]
+    - [Notable project or accomplishment with business impact]
+
+    ### [Previous Job Title] | [Previous Company] | [DATE: Month YYYY - Month YYYY]
+    - [Achievement bullet point]
+    - [Technical contribution]
+    - [Leadership or collaboration highlight]
+
+    ## Education
+    **[Degree Type] in [Field]** | [University] | [DATE: Year]
+    - [Relevant coursework, honors, or achievements if applicable]
+
+    ## Technical Skills
+    - **Programming Languages**: [languages separated by commas]
+    - **Frameworks & Libraries**: [frameworks and libraries]
+    - **Tools & Technologies**: [development tools, databases, cloud platforms]
+    - **Methodologies**: [Agile, DevOps, CI/CD, etc.]
+
+    ## Projects
+    ### [Project Name] | [DATE: Month YYYY]
+    - [Brief description with technical stack and impact]
+    - [Key features or achievements]
+
+    SPECIAL FORMATTING RULES:
+    - Use [CENTER] marker for centered text (contact info, professional title)
+    - Use [DATE: content] marker for all date ranges in experience section
+    - Use ### for job titles and project names
+    - Use ** for emphasis on degrees, company names in education
+    - Use 📧 📱 🌐 📍 icons for contact information
+    - Maintain consistent bullet point formatting with -
+    - Preserve technical terminology and acronyms exactly as they appear
+    - Use action verbs: Architected, Developed, Implemented, Led, Optimized, Delivered
+
+    FOCUS ON:
+    - Clean, scannable format for ATS systems
+    - Professional technical language
+    - Quantified achievements where possible
+    - Modern resume structure
+    - Consistent formatting throughout"""
+
+            # Build user preferences context
+            prefs_context = ""
+            if user_preferences:
+                style = user_preferences.get('style', 'professional')
+                if style == 'technical':
+                    prefs_context = "Focus on technical depth, programming languages, and system architecture details."
+                elif style == 'creative':
+                    prefs_context = "Emphasize creative projects, design skills, and innovative solutions."
+                elif style == 'academic':
+                    prefs_context = "Highlight research experience, publications, and academic achievements."
+                else:
+                    prefs_context = "Create a clean, professional format suitable for corporate environments."
+
+            user_prompt = f"""Convert this PDF resume text into clean ResumeForge markdown format:
+
+    STYLE PREFERENCE: {prefs_context}
+
+    PDF TEXT TO CONVERT:
+    {pdf_text}
+
+    Convert to markdown following the ResumeForge template exactly. Respond with ONLY the markdown content."""
+
+            completion = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                max_tokens=2500,
+                temperature=0.2
+            )
+            
+            markdown_content = completion.choices[0].message.content.strip()
+            
+            # Clean up any potential markdown code blocks or extra formatting
+            if markdown_content.startswith('```markdown'):
+                markdown_content = markdown_content.replace('```markdown', '').replace('```', '').strip()
+            elif markdown_content.startswith('```'):
+                markdown_content = markdown_content.replace('```', '').strip()
+            
+            # Validate that we have actual content
+            if len(markdown_content) < 50:
+                logger.warning("Generated markdown content seems too short")
+                return {
+                    "success": False,
+                    "error": "Generated content appears incomplete",
+                    "markdown": ""
+                }
+            
+            return {
+                "success": True,
+                "markdown": markdown_content,
+                "original_length": len(pdf_text),
+                "processed_length": len(markdown_content),
+                "processing_notes": [
+                    "Converted PDF text to structured markdown",
+                    "Applied ResumeForge formatting standards",
+                    "Standardized date formats",
+                    "Enhanced technical terminology"
+                ]
+            }
+            
+        except Exception as e:
+            logger.error(f"PDF to markdown conversion failed: {e}")
+            return {
+                "success": False,
+                "error": str(e),
+                "markdown": ""
+            }
 
 # Create a singleton instance
 llm_service = LLMService()
