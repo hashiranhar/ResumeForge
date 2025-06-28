@@ -56,14 +56,6 @@ class PDFService:
     def extract_text_from_pdf(self, pdf_bytes: bytes) -> Dict[str, Any]:
         """Extract text from PDF using multiple methods"""
         try:
-            # Check file size
-            if len(pdf_bytes) > self.max_file_size:
-                return {
-                    "success": False,
-                    "error": "PDF file too large (max 5MB)",
-                    "text": ""
-                }
-            
             # Method 1: pdfplumber (better for complex layouts)
             text = self._extract_with_pdfplumber(pdf_bytes)
             
