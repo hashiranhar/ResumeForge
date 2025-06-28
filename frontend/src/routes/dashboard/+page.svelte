@@ -1,6 +1,7 @@
 <script>
     import { onMount } from 'svelte';
     import { goto } from '$app/navigation';
+    import { browser } from '$app/environment';
     import { isAuthenticated, user } from '$lib/stores/auth.js';
     import { cvs, templates, cvService, isLoading } from '$lib/stores/cv.js';
     import { addToast } from '$lib/stores/toast.js';
@@ -25,7 +26,7 @@
     let deletingCV = false;
 
     // Redirect if not authenticated
-    $: if (!$isAuthenticated) {
+    $: if (!$isAuthenticated && browser) {
         goto('/auth/login');
     }
 
@@ -69,24 +70,33 @@
         creatingCV = true;
 
         try {
-            const templateContent = selectedTemplate?.content || `# ${newCVName}\n\n## Contact Information\n\n## Summary\n\n## Experience\n\n## Education\n\n## Skills`;
+            let result;
             
-            const result = await cvService.createCV(
-                newCVName.trim(),
-                templateContent,
-                { 
-                    fontSize: 12,
-                    fontFamily: 'Arial',
-                    theme: 'professional' 
-                }
-            );
+            if (selectedTemplate) {
+                // Create CV from template using backend endpoint
+                result = await cvService.createCVFromTemplate(selectedTemplate.id, newCVName.trim());
+            } else {
+                // Create blank CV
+                const blankContent = `# ${newCVName}\n\n## Contact Information\n\n## Summary\n\n## Experience\n\n## Education\n\n## Skills`;
+                result = await cvService.createCV(
+                    newCVName.trim(),
+                    blankContent,
+                    { 
+                        fontSize: 12,
+                        fontFamily: 'Arial',
+                        theme: 'professional' 
+                    }
+                );
+            }
 
             if (result.success) {
                 showNewCVModal = false;
                 newCVName = '';
                 selectedTemplate = null;
                 addToast('CV created successfully!', 'success');
-                goto(`/editor?cv=${result.data.id}`);
+                if (browser) {
+                    goto(`/editor?cv=${result.data.id}`);
+                }
             } else {
                 addToast(result.error || 'Failed to create CV', 'error');
             }

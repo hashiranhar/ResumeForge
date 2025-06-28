@@ -259,28 +259,46 @@ export const cvService = {
             isLoading.set(false);
         }
     },
-
-    // Download PDF
-    async downloadPDF(cvId, filename) {
+    
+    async createCVFromTemplate(templateId, cvName) {
+        isLoading.set(true);
+        error.set(null);
+        
         try {
-            const response = await authenticatedFetch(`/api/cvs/${cvId}/pdf`);
+            const response = await authenticatedFetch('/api/templates/create-cv', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    template_id: templateId,
+                    cv_name: cvName
+                })
+            });
+            
             if (!response.ok) {
-                throw new Error('Failed to generate PDF');
+                const errorData = await response.json();
+                throw new Error(errorData.detail || 'Failed to create CV from template');
             }
             
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = filename || 'cv.pdf';
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
+            const newCV = await response.json();
             
-            return { success: true };
+            // Add to CVs list and set as current
+            cvs.update(list => [newCV, ...list]);
+            currentCV.set(newCV);
+            draftCV.set({
+                id: newCV.id,
+                name: newCV.name,
+                markdown_content: newCV.markdown_content || '',
+                settings: newCV.settings
+            });
+            
+            return { success: true, data: newCV };
         } catch (err) {
+            error.set(err.message);
             return { success: false, error: err.message };
+        } finally {
+            isLoading.set(false);
         }
     },
 
