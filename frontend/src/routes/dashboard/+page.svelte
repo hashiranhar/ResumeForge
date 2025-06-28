@@ -25,7 +25,7 @@
     let cvToDelete = null;
     let deletingCV = false;
 
-    // Redirect if not authenticated
+    // Redirect if not authenticated (with browser check)
     $: if (browser && !$isAuthenticated) {
         goto('/auth/login');
     }
