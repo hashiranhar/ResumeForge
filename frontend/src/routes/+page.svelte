@@ -22,7 +22,7 @@
     <meta name="description" content="Create professional CVs with our AI-powered Markdown editor. Build, customize, and export beautiful resumes in minutes." />
 </svelte:head>
 
-<div class="bg-gradient-to-br from-primary-50 to-blue-100 dark:from-gray-900 dark:to-gray-800 min-h-screen">
+<div class="bg-gradient-to-br from-primary-50 to-blue-100 dark:from-black dark:to-black min-h-screen">
     <!-- Hero Section -->
     <div class="relative overflow-hidden">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
@@ -50,8 +50,8 @@
     </div>
 
     <!-- Video Section -->
-    <div class="py-20 bg-white dark:bg-gray-900">
-        <div class="relative w-full py-20 bg-white dark:bg-gray-900 flex items-center justify-center">
+    <div class="py-20 bg-white dark:bg-black">
+        <div class="relative w-full py-20 bg-white dark:bg-black flex items-center justify-center">
         <video
             src="/demo-showcase.mp4"
             autoplay

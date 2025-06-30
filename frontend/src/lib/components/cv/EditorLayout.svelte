@@ -441,7 +441,7 @@
         <div class="flex-1 flex overflow-hidden" bind:this={splitContainer}>
             <!-- Left Panel -->
             <div 
-                class="bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 flex flex-col transition-all duration-300"
+                class="bg-white dark:bg-black border-r border-gray-200 dark:border-gray-700 flex flex-col transition-all duration-300"
                 style="width: {leftPanelWidth}%"
             >
                 {#if activeTab === 'editor'}
