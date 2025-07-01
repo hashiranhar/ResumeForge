@@ -1,5 +1,7 @@
 <script>
     import { onMount, afterUpdate } from 'svelte';
+    import { marked } from 'marked';
+    import DOMPurify from 'dompurify';
     import { chatHistory, isLLMLoading, llmService } from '$lib/stores/llm.js';
     import { currentCV, draftCV } from '$lib/stores/cv.js';
     import { addToast } from '$lib/stores/toast.js';
@@ -9,6 +11,12 @@
     let messageInput = '';
     let chatContainer;
     let isTyping = false;
+
+    // Configure marked for better formatting
+    marked.setOptions({
+        breaks: true,
+        gfm: true
+    });
 
     // Auto-scroll to bottom when new messages arrive
     afterUpdate(() => {
@@ -22,7 +30,7 @@
         llmService.clearChat();
         
         // Add welcome message
-        llmService.addToChatHistory('assistant', 'Hi! I\'m your AI CV assistant. I can help you improve your CV content, suggest better phrasing, or answer questions about your resume. How can I help you today?');
+        llmService.addToChatHistory('assistant', 'Hi! I\'m ForgeBot, your AI CV assistant. I can help you improve your CV content, suggest better phrasing, or answer questions about your resume. How can I help you today?');
     });
 
     async function sendMessage() {
@@ -58,6 +66,17 @@
         sendMessage();
     }
 
+    // Function to render markdown content safely
+    function renderMarkdown(content) {
+        try {
+            const html = marked(content);
+            return DOMPurify.sanitize(html);
+        } catch (error) {
+            console.error('Markdown rendering error:', error);
+            return content; // Fallback to plain text
+        }
+    }
+
     // Quick action buttons
     const quickActions = [
         'How can I improve my professional summary?',
@@ -75,7 +94,7 @@
     <div class="border-b border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-900">
         <div class="flex items-center space-x-2">
             <MessageSquare class="h-4 w-4 text-gray-500 dark:text-gray-400" />
-            <h3 class="font-medium text-gray-900 dark:text-white">AI CV Assistant</h3>
+            <h3 class="font-medium text-gray-900 dark:text-white">ForgeBot - AI CV Assistant</h3>
         </div>
         <p class="text-sm text-gray-600 dark:text-gray-300 mt-1">
             Get personalized advice and improvements for your CV
@@ -91,7 +110,7 @@
             <!-- Welcome state - FIXED: Added dark mode styling -->
             <div class="text-center py-8">
                 <Bot class="h-12 w-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-                <p class="text-gray-600 dark:text-gray-300">Start a conversation with your AI assistant</p>
+                <p class="text-gray-600 dark:text-gray-300">Start a conversation with ForgeBot</p>
             </div>
         {:else}
             {#each $chatHistory as message}
@@ -104,11 +123,26 @@
                             </div>
                         {/if}
                         
-                        <!-- Message bubble - FIXED: Added dark mode styling -->
+                        <!-- Message bubble - FIXED: Added markdown rendering and better styling -->
                         <div class="px-3 py-2 rounded-lg {message.role === 'user' 
                             ? 'bg-primary-600 dark:bg-primary-700 text-white' 
                             : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white'}">
-                            <p class="text-sm whitespace-pre-wrap">{message.content}</p>
+                            {#if message.role === 'assistant'}
+                                <!-- Render markdown for assistant messages -->
+                                <div class="text-sm prose prose-sm dark:prose-invert max-w-none
+                                    prose-headings:text-gray-900 dark:prose-headings:text-white
+                                    prose-strong:text-gray-900 dark:prose-strong:text-white
+                                    prose-code:text-gray-900 dark:prose-code:text-white
+                                    prose-code:bg-gray-200 dark:prose-code:bg-gray-700
+                                    prose-pre:bg-gray-200 dark:prose-pre:bg-gray-700
+                                    prose-blockquote:text-gray-700 dark:prose-blockquote:text-gray-300
+                                    prose-li:text-gray-900 dark:prose-li:text-white">
+                                    {@html renderMarkdown(message.content)}
+                                </div>
+                            {:else}
+                                <!-- Plain text for user messages -->
+                                <p class="text-sm whitespace-pre-wrap">{message.content}</p>
+                            {/if}
                         </div>
                         
                         {#if message.role === 'user'}
@@ -168,7 +202,7 @@
                 <textarea
                     bind:value={messageInput}
                     on:keypress={handleKeyPress}
-                    placeholder="Ask me anything about your CV..."
+                    placeholder="Ask ForgeBot anything about your CV..."
                     class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 rounded-lg resize-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400 focus:border-primary-500 dark:focus:border-primary-400"
                     rows="2"
                     disabled={$isLLMLoading}
@@ -188,3 +222,48 @@
         </p>
     </div>
 </div>
+
+<style>
+    /* Custom styles for better markdown rendering in chat */
+    :global(.prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6) {
+        margin-top: 0.5rem !important;
+        margin-bottom: 0.5rem !important;
+        line-height: 1.3 !important;
+    }
+    
+    :global(.prose p) {
+        margin-top: 0.25rem !important;
+        margin-bottom: 0.25rem !important;
+    }
+    
+    :global(.prose ul, .prose ol) {
+        margin-top: 0.25rem !important;
+        margin-bottom: 0.25rem !important;
+    }
+    
+    :global(.prose li) {
+        margin-top: 0.1rem !important;
+        margin-bottom: 0.1rem !important;
+    }
+
+    :global(.prose strong) {
+        font-weight: 600 !important;
+    }
+
+    :global(.prose code) {
+        padding: 0.125rem 0.25rem !important;
+        border-radius: 0.25rem !important;
+        font-size: 0.875rem !important;
+    }
+
+    :global(.prose blockquote) {
+        border-left: 3px solid #e5e7eb !important;
+        padding-left: 0.75rem !important;
+        font-style: italic !important;
+        margin: 0.5rem 0 !important;
+    }
+
+    :global(.dark .prose blockquote) {
+        border-left-color: #4b5563 !important;
+    }
+</style>
