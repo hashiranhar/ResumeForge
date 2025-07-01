@@ -50,11 +50,6 @@
             <!-- RIGHT SIDE - Navigation (sticks to right edge) -->
             <div class="flex items-center space-x-4">
                 {#if $isAuthenticated}
-                    <!-- New CV button -->
-                    <Button variant="primary" size="sm" on:click={handleNewCV}>
-                        <Plus class="h-4 w-4 mr-1" />
-                        New CV
-                    </Button>
 
                     <!-- Dashboard link -->
                     <a 

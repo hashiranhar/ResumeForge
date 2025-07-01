@@ -129,7 +129,7 @@
             </div>
 
             <!-- FIXED: Added dark mode styling -->
-            <div class="flex items-center justify-between">
+            <div class="flex items-center justify-center">
                 <div class="text-sm">
                     <a href="/auth/forgot-password" class="font-medium text-primary-600 dark:text-primary-400 hover:text-primary-500 dark:hover:text-primary-300">
                         Forgot your password?
@@ -137,23 +137,25 @@
                 </div>
             </div>
 
-            <Button 
-                type="submit" 
-                size="lg" 
-                variant="primary" 
-                {loading}
-                disabled={loading}
-                class="w-full"
-            >
-                {#if loading}
-                    Signing in...
-                {:else}
-                    Sign in
-                {/if}
-            </Button>
+            <!-- Centered sign in button -->
+            <div class="flex justify-center">
+                <Button 
+                    type="submit" 
+                    size="lg" 
+                    variant="primary" 
+                    {loading}
+                    disabled={loading}
+                >
+                    {#if loading}
+                        Signing in...
+                    {:else}
+                        Sign in
+                    {/if}
+                </Button>
+            </div>
         </form>
 
-        <!-- Demo option - FIXED: Added dark mode styling -->
+        <!-- Demo option -->
         <div class="mt-6">
             <div class="relative">
                 <div class="absolute inset-0 flex items-center">
@@ -164,12 +166,12 @@
                 </div>
             </div>
 
-            <div class="mt-6">
+            <!-- Added flex container for centering -->
+            <div class="mt-6 flex justify-center">
                 <Button 
                     variant="outline" 
                     size="lg" 
                     href="/editor?demo=true"
-                    class="w-full"
                 >
                     Try Demo (No Account Required)
                 </Button>

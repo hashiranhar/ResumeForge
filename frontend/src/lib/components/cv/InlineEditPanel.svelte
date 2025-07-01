@@ -160,18 +160,6 @@
             </div>
         </div>
 
-        <!-- Auto-save Toggle -->
-        <div class="flex items-center space-x-2">
-            <input
-                type="checkbox"
-                id="auto-save"
-                bind:checked={autoSave}
-                class="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600 rounded"
-            />
-            <label for="auto-save" class="text-sm text-gray-700 dark:text-gray-300">
-                Auto-save changes
-            </label>
-        </div>
     </div>
 
     <!-- Content Area -->
