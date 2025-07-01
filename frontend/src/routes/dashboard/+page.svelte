@@ -2,21 +2,20 @@
     import { onMount } from 'svelte';
     import { goto } from '$app/navigation';
     import { browser } from '$app/environment';
-    import { isAuthenticated, user } from '$lib/stores/auth.js';
-    import { authenticatedFetch } from '$lib/stores/auth.js';
+    import { isAuthenticated, user, authenticatedFetch } from '$lib/stores/auth.js';
     import { cvs, templates, cvService, isLoading } from '$lib/stores/cv.js';
     import { addToast } from '$lib/stores/toast.js';
     import { formatRelativeTime } from '$lib/utils/helpers.js';
     import Button from '$lib/components/common/Button.svelte';
     import Modal from '$lib/components/common/Modal.svelte';
     import Input from '$lib/components/common/Input.svelte';
-    import { Plus, FileText, Edit, Trash2, Download, Eye, Upload } from 'lucide-svelte'; // Added Upload
+    import { Plus, FileText, Edit, Trash2, Download, Eye, Upload } from 'lucide-svelte';
 
     // Modal state variables
     let showTemplateModal = false;
     let showNewCVModal = false;
     let showDeleteModal = false;
-    let showPDFImportModal = false; // NEW: PDF import modal state
+    let showPDFImportModal = false;
     
     // CV creation variables
     let selectedTemplate = null;
@@ -27,7 +26,7 @@
     let cvToDelete = null;
     let deletingCV = false;
 
-    // NEW: PDF import variables
+    // PDF import variables
     let pdfFile = null;
     let pdfFileName = '';
     let pdfCVName = '';
@@ -62,13 +61,11 @@
         showNewCVModal = true;
     }
 
-    // NEW: Handle PDF import flow
     function handleImportPDF() {
         showTemplateModal = false;
         showPDFImportModal = true;
     }
 
-    // NEW: Handle PDF file selection
     function handlePDFFileSelect(event) {
         const file = event.target.files[0];
         if (!file) return;
@@ -93,7 +90,6 @@
         pdfCVName = file.name.replace(/\.pdf$/i, '');
     }
 
-    // Keyboard event handler
     function handleKeydown(event, callback) {
         if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault();
@@ -101,7 +97,6 @@
         }
     }
 
-    // Existing functions continue below...
     async function handleCreateCV() {
         if (!newCVName.trim()) {
             addToast('Please enter a name for your CV', 'error');
@@ -178,21 +173,40 @@
         }
     }
 
+    // FIXED: Direct PDF download implementation since cvService.downloadPDF doesn't exist
     async function handleDownloadPDF(cv) {
         try {
-            const result = await cvService.downloadPDF(cv.id, `${cv.name}.pdf`);
+            addToast('Generating PDF...', 'info');
             
-            if (result.success) {
-                addToast('PDF downloaded successfully', 'success');
-            } else {
-                addToast(result.error || 'Failed to generate PDF', 'error');
+            const response = await authenticatedFetch(`/api/cvs/${cv.id}/pdf`);
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.detail || 'Failed to generate PDF');
             }
+
+            // Get the PDF blob
+            const blob = await response.blob();
+            
+            // Create download link
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${cv.name}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            
+            // Cleanup
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            
+            addToast('PDF downloaded successfully!', 'success');
         } catch (error) {
-            addToast('Failed to download PDF', 'error');
+            console.error('PDF download error:', error);
+            addToast(error.message || 'Failed to download PDF', 'error');
         }
     }
 
-    // NEW: Handle PDF import and conversion
     async function handlePDFImport() {
         if (!pdfFile || !pdfCVName.trim()) {
             addToast('Please select a PDF file and enter a CV name', 'error');
@@ -209,14 +223,12 @@
             formData.append('preferences', pdfPreferences);
 
             // Make API call to convert PDF
-            // Note: For FormData uploads, we need to manually handle the request to avoid Content-Type issues
             const currentToken = localStorage.getItem('resumeforge_token');
             
             const response = await fetch('/api/pdf/create-cv', {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${currentToken}`
-                    // DON'T set Content-Type - let browser handle it for FormData
                 },
                 body: formData
             });
@@ -239,7 +251,7 @@
                 pdfCVName = '';
                 pdfPreferences = 'professional';
 
-                // Show success message with processing info
+                // Show success message
                 addToast('PDF imported successfully! Review and edit as needed.', 'success');
                 
                 // Redirect to editor with the new CV
@@ -392,7 +404,7 @@
             </button>
         </div>
 
-        <!-- Templates (existing code remains the same) -->
+        <!-- Templates -->
         {#if $templates.length > 0}
             <div>
                 <h4 class="text-md font-medium text-gray-900 dark:text-white mb-4">
@@ -495,7 +507,6 @@
     size="lg"
     close={() => {
         showPDFImportModal = false;
-        // Reset PDF import state
         pdfFile = null;
         pdfFileName = '';
         pdfCVName = '';
