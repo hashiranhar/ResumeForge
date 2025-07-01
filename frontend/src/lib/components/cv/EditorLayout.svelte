@@ -594,7 +594,7 @@
 
     .settings-content-area::-webkit-scrollbar {
     display: none;
-    }
+}
 
     .settings-panel-container * {
         overscroll-behavior: contain;
