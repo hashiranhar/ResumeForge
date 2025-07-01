@@ -1,0 +1,7 @@
+Please help me improve my CV based on this instruction: "{instruction}"
+
+{context_info}
+Current CV Content:
+{current_content}
+
+Please edit the content according to my instruction while following your guidelines.

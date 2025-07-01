@@ -52,3 +52,4 @@ def create_cv_from_template(
         settings=template.settings
     )
     return cv
+

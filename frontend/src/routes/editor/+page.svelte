@@ -134,6 +134,7 @@ Experienced software engineer with 5+ years of expertise in full-stack developme
             if ($currentCV && $hasUnsavedChanges) {
                 await cvService.autoSave(
                     $currentCV.id,
+                    $draftCV.name,
                     $draftCV.markdown_content,
                     $draftCV.settings
                 );

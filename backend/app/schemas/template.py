@@ -16,3 +16,5 @@ class TemplateResponse(BaseModel):
 class CreateCVFromTemplate(BaseModel):
     template_id: UUID
     cv_name: str
+
+    

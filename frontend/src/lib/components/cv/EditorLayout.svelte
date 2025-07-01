@@ -1,6 +1,7 @@
 <script>
     import { onMount } from 'svelte';
     import { currentCV, draftCV, hasUnsavedChanges, cvService } from '$lib/stores/cv.js';
+    import { authenticatedFetch } from '$lib/stores/auth.js';
     import { addToast } from '$lib/stores/toast.js';
     import { Save, Download, Settings, MessageSquare, Edit3, Zap, Wand2, X, FileText } from 'lucide-svelte';
     import Button from '$lib/components/common/Button.svelte';
@@ -133,25 +134,45 @@
 
     // Regular download functions for authenticated users
     async function handleDownloadPDF() {
-        if (!$currentCV) {
-            addToast('Please save your CV first', 'info');
-            return;
+    if (!$currentCV) {
+        addToast('Please save your CV first', 'info');
+        return;
+    }
+
+    downloadingPDF = true;
+    try {
+        addToast('Generating PDF...', 'info');
+        
+        const response = await authenticatedFetch(`/api/cvs/${$currentCV.id}/pdf`);
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || 'Failed to generate PDF');
         }
 
-        downloadingPDF = true;
-        try {
-            const result = await cvService.downloadPDF($currentCV.id, `${$currentCV.name}.pdf`);
-            if (result.success) {
-                addToast('PDF downloaded successfully', 'success');
-            } else {
-                addToast(result.error || 'Failed to download PDF', 'error');
-            }
-        } catch (error) {
-            addToast('Failed to download PDF', 'error');
-        } finally {
-            downloadingPDF = false;
-        }
+        // Get the PDF blob
+        const blob = await response.blob();
+        
+        // Create download link
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${$currentCV.name}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        
+        // Cleanup
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        addToast('PDF downloaded successfully!', 'success');
+    } catch (error) {
+        console.error('PDF download error:', error);
+        addToast(error.message || 'Failed to download PDF', 'error');
+    } finally {
+        downloadingPDF = false;
     }
+}
 
     async function handleDownloadMarkdown() {
         if (!$currentCV) {
@@ -491,46 +512,27 @@
     <div class="relative">
         <!-- Settings Panel -->
         <div 
-            class="fixed top-0 right-0 h-full bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 shadow-xl transform transition-transform duration-300 ease-in-out z-40 {showSettings ? 'translate-x-0' : 'translate-x-full'}"
+            class="settings-panel-container bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 shadow-xl transform transition-transform duration-300 ease-in-out {showSettings ? 'translate-x-0' : 'translate-x-full'}"
             style="width: {settingsPanelWidth}px"
             role="complementary"
             aria-label="Settings panel"
+            on:wheel|stopPropagation
+            on:scroll|stopPropagation
+            on:touchmove|stopPropagation
         >
             <!-- Settings Header -->
-            <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-                <h2 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
-                    <Settings class="h-5 w-5 mr-2 text-gray-500 dark:text-gray-400" />
-                    CV Settings
-                </h2>
-                <button
-                    type="button"
-                    class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors"
-                    on:click={closeSettings}
-                    aria-label="Close settings panel"
-                    title="Close settings (Esc)"
-                >
-                    <X class="h-5 w-5" />
-                </button>
+            <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex-shrink-0">
+                <!-- your existing header content -->
             </div>
-
+    
             <!-- Settings Content -->
-            <div class="flex-1 overflow-y-auto">
+            <div 
+                class="settings-content-area"
+                on:wheel|stopPropagation
+                on:scroll|stopPropagation
+                on:touchmove|stopPropagation
+            >
                 <SettingsPanel {closeSettings} />
-            </div>
-
-            <!-- Settings Footer -->
-            <div class="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
-                <div class="flex items-center text-sm text-gray-600 dark:text-gray-400">
-                    <div class="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
-                    Changes are applied in real-time
-                </div>
-                
-                <!-- FIXED: Add demo notice in settings footer -->
-                {#if isDemo}
-                    <div class="mt-2 p-2 bg-blue-50 dark:bg-blue-900 border border-blue-200 dark:border-blue-700 rounded text-xs text-blue-800 dark:text-blue-200">
-                        <strong>Demo Mode:</strong> Sign up to save your settings and unlock AI features!
-                    </div>
-                {/if}
             </div>
         </div>
 
@@ -571,6 +573,33 @@
         cursor: col-resize !important;
     }
 
+        .settings-panel-container {
+        position: fixed;
+        top: 0;
+        right: 0;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        z-index: 40;
+    }
+
+    .settings-content-area {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+    }
+
+    .settings-content-area::-webkit-scrollbar {
+    display: none;
+}
+
+    .settings-panel-container * {
+        overscroll-behavior: contain;
+    }
+
     /* Tab focus styles */
     button[role="tab"]:focus {
         outline: 2px solid rgb(59 130 246);
@@ -583,9 +612,6 @@
     }
 
     /* Ensure the settings panel stays above other content */
-    .z-40 {
-        z-index: 40;
-    }
     
     .z-30 {
         z-index: 30;
