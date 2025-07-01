@@ -5,11 +5,11 @@
     import { isAuthenticated, user, authenticatedFetch } from '$lib/stores/auth.js';
     import { cvs, templates, cvService, isLoading } from '$lib/stores/cv.js';
     import { addToast } from '$lib/stores/toast.js';
-    import { formatRelativeTime } from '$lib/utils/helpers.js';
+    import { formatRelativeTime, formatDate } from '$lib/utils/helpers.js';
     import Button from '$lib/components/common/Button.svelte';
     import Modal from '$lib/components/common/Modal.svelte';
     import Input from '$lib/components/common/Input.svelte';
-    import { Plus, FileText, Edit, Trash2, Download, Eye, Upload } from 'lucide-svelte';
+    import { Plus, FileText, Edit, Trash2, Download, Eye, Upload, Clock, Calendar, Copy } from 'lucide-svelte';
 
     // Modal state variables
     let showTemplateModal = false;
@@ -25,6 +25,8 @@
     // Delete variables
     let cvToDelete = null;
     let deletingCV = false;
+    let duplicatingCV = false;
+
 
     // PDF import variables
     let pdfFile = null;
@@ -128,7 +130,8 @@
                 newCVName = '';
                 selectedTemplate = null;
                 addToast('CV created successfully!', 'success');
-                if (browser) {
+                
+                if (browser && result.data) {
                     goto(`/editor?cv=${result.data.id}`);
                 }
             } else {
@@ -142,7 +145,9 @@
     }
 
     function handleEditCV(cv) {
-        goto(`/editor?cv=${cv.id}`);
+        if (browser) {
+            goto(`/editor?cv=${cv.id}`);
+        }
     }
 
     function handleDeleteCV(cv) {
@@ -150,19 +155,17 @@
         showDeleteModal = true;
     }
 
-    async function confirmDelete() {
+    async function confirmDeleteCV() {
         if (!cvToDelete) return;
 
         deletingCV = true;
 
         try {
             const result = await cvService.deleteCV(cvToDelete.id);
-
             if (result.success) {
+                addToast('CV deleted successfully', 'success');
                 showDeleteModal = false;
                 cvToDelete = null;
-                addToast('CV deleted successfully', 'success');
-                await cvService.loadCVs();
             } else {
                 addToast(result.error || 'Failed to delete CV', 'error');
             }
@@ -173,34 +176,10 @@
         }
     }
 
-    // FIXED: Direct PDF download implementation since cvService.downloadPDF doesn't exist
     async function handleDownloadPDF(cv) {
         try {
-            addToast('Generating PDF...', 'info');
-            
-            const response = await authenticatedFetch(`/api/cvs/${cv.id}/pdf`);
-            
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.detail || 'Failed to generate PDF');
-            }
-
-            // Get the PDF blob
-            const blob = await response.blob();
-            
-            // Create download link
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `${cv.name}.pdf`;
-            document.body.appendChild(a);
-            a.click();
-            
-            // Cleanup
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
-            
-            addToast('PDF downloaded successfully!', 'success');
+            await cvService.downloadPDF(cv.id, `${cv.name}.pdf`);
+            addToast('PDF downloaded successfully', 'success');
         } catch (error) {
             console.error('PDF download error:', error);
             addToast(error.message || 'Failed to download PDF', 'error');
@@ -269,6 +248,47 @@
             importingPDF = false;
         }
     }
+
+    async function handleDuplicateCV(cv) {
+        duplicatingCV = true;
+        
+        try {
+            // First, get the full CV data
+            const currentToken = localStorage.getItem('resumeforge_token');
+            const response = await fetch(`/api/cvs/${cv.id}`, {
+                headers: {
+                    'Authorization': `Bearer ${currentToken}`
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch CV data');
+            }
+
+            const fullCV = await response.json();
+            
+            // Create new CV with duplicated content
+            const duplicateName = `Copy of ${cv.name}`;
+            const result = await cvService.createCV(
+                duplicateName,
+                fullCV.markdown_content,
+                fullCV.settings
+            );
+
+            if (result.success) {
+                addToast('CV duplicated successfully!', 'success');
+                // Refresh the list to show the new duplicated CV
+                await cvService.loadCVs();
+            } else {
+                addToast(result.error || 'Failed to duplicate CV', 'error');
+            }
+        } catch (error) {
+            console.error('Duplicate error:', error);
+            addToast('Failed to duplicate CV', 'error');
+        } finally {
+            duplicatingCV = false;
+        }
+    }
 </script>
 
 <svelte:head>
@@ -321,12 +341,21 @@
                     <div class="p-6">
                         <div class="flex items-start justify-between mb-4">
                             <div class="flex-1">
-                                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+                                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">
                                     {cv.name}
                                 </h3>
-                                <p class="text-sm text-gray-500 dark:text-gray-400">
-                                    Updated {formatRelativeTime(cv.updated_at)}
-                                </p>
+                                
+                                <!-- Date Information -->
+                                <div class="space-y-1">
+                                    <div class="flex items-center text-sm text-gray-500 dark:text-gray-400">
+                                        <Calendar class="h-4 w-4 mr-2" />
+                                        <span>Created {formatDate(cv.created_at)}</span>
+                                    </div>
+                                    <div class="flex items-center text-sm text-gray-500 dark:text-gray-400">
+                                        <Clock class="h-4 w-4 mr-2" />
+                                        <span>Updated {formatRelativeTime(cv.updated_at)}</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -346,13 +375,23 @@
                                 </Button>
                             </div>
                             
-                            <button
-                                class="text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 transition-colors"
-                                on:click={() => handleDeleteCV(cv)}
-                                title="Delete CV"
-                            >
-                                <Trash2 class="h-4 w-4" />
-                            </button>
+                            <div class="flex items-center space-x-2">
+                                <button
+                                    class="text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors disabled:opacity-50"
+                                    on:click={() => handleDuplicateCV(cv)}
+                                    disabled={duplicatingCV}
+                                    title="Duplicate CV"
+                                >
+                                    <Copy class="h-4 w-4" />
+                                </button>
+                                <button
+                                    class="text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+                                    on:click={() => handleDeleteCV(cv)}
+                                    title="Delete CV"
+                                >
+                                    <Trash2 class="h-4 w-4" />
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -415,24 +454,16 @@
                         <li>
                             <button
                                 type="button"
-                                class="border border-gray-200 dark:border-gray-600 rounded-lg p-4 hover:border-primary-300 dark:hover:border-primary-500 cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 text-left w-full"
+                                class="w-full p-4 border border-gray-200 dark:border-gray-600 rounded-lg text-left hover:border-primary-300 dark:hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
                                 on:click={() => handleTemplateSelect(template)}
                                 aria-describedby="template-{template.id}-desc"
                             >
-                                <h3 class="font-medium text-gray-900 dark:text-white mb-1">
+                                <h5 class="font-medium text-gray-900 dark:text-white mb-1">
                                     {template.name}
-                                </h3>
-                                <p class="text-sm text-gray-600 dark:text-gray-300 mb-2" id="template-{template.id}-desc">
-                                    {template.description}
+                                </h5>
+                                <p class="text-sm text-gray-600 dark:text-gray-300" id="template-{template.id}-desc">
+                                    {template.description || 'Professional template'}
                                 </p>
-                                {#if template.is_default === 'true'}
-                                    <span 
-                                        class="inline-block bg-primary-100 dark:bg-primary-900 text-primary-800 dark:text-primary-200 text-xs px-2 py-1 rounded"
-                                        aria-label="Recommended template"
-                                    >
-                                        Recommended
-                                    </span>
-                                {/if}
                             </button>
                         </li>
                     {/each}
@@ -442,68 +473,88 @@
     </div>
 </Modal>
 
-<!-- New CV Modal -->
-<Modal 
-    bind:open={showNewCVModal} 
-    title="Create New CV"
-    close={() => showNewCVModal = false}
+<!-- CV Name Modal -->
+<Modal
+    bind:open={showNewCVModal}
+    title={selectedTemplate ? `Create CV from ${selectedTemplate.name}` : 'Create New CV'}
+    size="md"
+    close={() => {
+        showNewCVModal = false;
+        newCVName = '';
+        selectedTemplate = null;
+    }}
 >
-    <div class="space-y-4">
-        {#if selectedTemplate}
-            <div class="bg-blue-50 dark:bg-blue-900 border border-blue-200 dark:border-blue-700 rounded-lg p-4">
-                <p class="text-sm text-blue-800 dark:text-blue-200">
-                    Using template: <strong>{selectedTemplate.name}</strong>
-                </p>
-            </div>
-        {/if}
-
+    <form on:submit|preventDefault={handleCreateCV} class="space-y-4">
         <Input
             label="CV Name"
-            placeholder="e.g. Software Engineer Resume"
+            placeholder="e.g. Senior Software Engineer Resume"
             bind:value={newCVName}
             required
+            autofocus
         />
-    </div>
 
-    <div slot="footer" class="flex justify-end">
-        <Button 
-            on:click={handleCreateCV}
-            loading={creatingCV}
-            disabled={creatingCV || !newCVName.trim()}
-        >
-            Create CV
-        </Button>
-    </div>
+        <div class="flex justify-end space-x-3">
+            <Button
+                variant="outline"
+                on:click={() => {
+                    showNewCVModal = false;
+                    newCVName = '';
+                    selectedTemplate = null;
+                }}
+            >
+                Cancel
+            </Button>
+            <Button type="submit" disabled={creatingCV || !newCVName.trim()}>
+                {#if creatingCV}
+                    Creating...
+                {:else}
+                    Create CV
+                {/if}
+            </Button>
+        </div>
+    </form>
 </Modal>
 
 <!-- Delete Confirmation Modal -->
-<Modal bind:open={showDeleteModal} title="Delete CV">
+<Modal
+    bind:open={showDeleteModal}
+    title="Delete CV"
+    size="sm"
+    close={() => {
+        showDeleteModal = false;
+        cvToDelete = null;
+    }}
+>
     <div class="space-y-4">
         <p class="text-gray-600 dark:text-gray-300">
-            Are you sure you want to delete <strong class="text-gray-900 dark:text-white">{cvToDelete?.name}</strong>? 
-            This action cannot be undone.
+            Are you sure you want to delete "<strong>{cvToDelete?.name}</strong>"? This action cannot be undone.
         </p>
-    </div>
 
-    <div slot="footer" class="flex justify-end space-x-3">
-        <Button variant="outline" on:click={() => showDeleteModal = false}>
-            Cancel
-        </Button>
-        <Button 
-            variant="danger"
-            on:click={confirmDelete}
-            loading={deletingCV}
-            disabled={deletingCV}
-        >
-            Delete CV
-        </Button>
+        <div class="flex justify-end space-x-3">
+            <Button
+                variant="outline"
+                on:click={() => {
+                    showDeleteModal = false;
+                    cvToDelete = null;
+                }}
+            >
+                Cancel
+            </Button>
+            <Button variant="danger" on:click={confirmDeleteCV} disabled={deletingCV}>
+                {#if deletingCV}
+                    Deleting...
+                {:else}
+                    Delete CV
+                {/if}
+            </Button>
+        </div>
     </div>
 </Modal>
 
 <!-- PDF Import Modal -->
-<Modal 
-    bind:open={showPDFImportModal} 
-    title="Import from PDF" 
+<Modal
+    bind:open={showPDFImportModal}
+    title="Import CV from PDF"
     size="lg"
     close={() => {
         showPDFImportModal = false;
@@ -513,42 +564,36 @@
         pdfPreferences = 'professional';
     }}
 >
-    <div class="space-y-6">
-        <p class="text-gray-600 dark:text-gray-300">
-            Upload your existing PDF resume and we'll convert it to an editable CV
-        </p>
-
-        <!-- File Upload Area -->
-        <div class="space-y-4">
-            <div class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                PDF File *
-            </div>
+    <form on:submit|preventDefault={handlePDFImport} class="space-y-6">
+        <!-- File Upload -->
+        <div>
+            <label for="pdf-file-input" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                Select PDF File
+            </label>
             
-            <!-- Drag & Drop Zone -->
-            <div 
-                class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center hover:border-orange-400 dark:hover:border-orange-500 transition-colors cursor-pointer"
-                class:border-orange-400={pdfFile}
-                class:bg-orange-50={pdfFile}
-                class:dark:bg-orange-900={pdfFile}
+            <div ß
+                class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center cursor-pointer hover:border-gray-400 dark:hover:border-gray-500 transition-colors"
                 on:click={() => document.getElementById('pdf-file-input').click()}
                 on:keydown={(e) => handleKeydown(e, () => document.getElementById('pdf-file-input').click())}
                 role="button"
                 tabindex="0"
-                aria-label="Click to select PDF file"
+                aria-describedby="file-upload-desc"
             >
                 {#if pdfFile}
-                    <!-- File Selected State -->
+                    <!-- File Selected -->
                     <div class="space-y-2">
-                        <FileText class="h-12 w-12 text-orange-500 mx-auto" />
+                        <FileText class="h-12 w-12 text-green-500 mx-auto" />
                         <div class="text-sm">
-                            <p class="font-medium text-gray-900 dark:text-white">{pdfFileName}</p>
+                            <p class="font-medium text-gray-900 dark:text-white">
+                                {pdfFileName}
+                            </p>
                             <p class="text-gray-500 dark:text-gray-400">
                                 {(pdfFile.size / 1024 / 1024).toFixed(2)} MB
                             </p>
                         </div>
-                        <button 
+                        <button
                             type="button"
-                            class="text-sm text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300"
+                            class="text-sm text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
                             on:click|stopPropagation={() => {
                                 pdfFile = null;
                                 pdfFileName = '';
@@ -566,7 +611,7 @@
                             <p class="font-medium text-gray-900 dark:text-white">
                                 Click to upload or drag and drop
                             </p>
-                            <p class="text-gray-500 dark:text-gray-400">
+                            <p class="text-gray-500 dark:text-gray-400" id="file-upload-desc">
                                 PDF files up to 5MB
                             </p>
                         </div>
@@ -609,43 +654,43 @@
                             <button
                                 type="button"
                                 class="p-3 border rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 {pdfPreferences === style.value 
-                                    ? 'border-orange-500 bg-orange-50 dark:bg-orange-900' 
+                                    ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20' 
                                     : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'}"
                                 on:click={() => pdfPreferences = style.value}
                             >
-                                <p class="font-medium text-gray-900 dark:text-white text-sm">
+                                <div class="font-medium text-gray-900 dark:text-white text-sm">
                                     {style.label}
-                                </p>
-                                <p class="text-xs text-gray-500 dark:text-gray-400">
+                                </div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400">
                                     {style.desc}
-                                </p>
+                                </div>
                             </button>
                         {/each}
                     </div>
                 </div>
+
+                <div class="flex justify-end space-x-3">
+                    <Button
+                        variant="outline"
+                        on:click={() => {
+                            showPDFImportModal = false;
+                            pdfFile = null;
+                            pdfFileName = '';
+                            pdfCVName = '';
+                            pdfPreferences = 'professional';
+                        }}
+                    >
+                        Cancel
+                    </Button>
+                    <Button type="submit" disabled={importingPDF || !pdfCVName.trim()}>
+                        {#if importingPDF}
+                            Importing...
+                        {:else}
+                            Import CV
+                        {/if}
+                    </Button>
+                </div>
             </div>
         {/if}
-    </div>
-
-    <div slot="footer" class="flex justify-end space-x-3">
-        <Button 
-            variant="outline" 
-            on:click={() => {
-                showPDFImportModal = false;
-                pdfFile = null;
-                pdfFileName = '';
-                pdfCVName = '';
-                pdfPreferences = 'professional';
-            }}
-        >
-            Cancel
-        </Button>
-        <Button 
-            on:click={handlePDFImport}
-            loading={importingPDF}
-            disabled={importingPDF || !pdfFile || !pdfCVName.trim()}
-        >
-            {importingPDF ? 'Converting...' : 'Import & Convert'}
-        </Button>
-    </div>
+    </form>
 </Modal>
