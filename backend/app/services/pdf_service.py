@@ -4,6 +4,9 @@ from io import BytesIO
 from typing import Dict, Any, Optional
 import logging
 import re
+import PyPDF2
+import pdfplumber
+import io
 
 logger = logging.getLogger(__name__)
 
@@ -12,6 +15,8 @@ class PDFService:
     def __init__(self):
         """Initialize PDF service with default styles"""
         self.default_css = self._get_default_css()
+        self.max_file_size = 5 * 1024 * 1024  # 5MB
+
     
     def generate_pdf(self, markdown_content: str, settings: Optional[Dict[str, Any]] = None) -> bytes:
         """
@@ -47,6 +52,47 @@ class PDFService:
         except Exception as e:
             logger.error(f"PDF generation failed: {str(e)}")
             raise Exception(f"Failed to generate PDF: {str(e)}")
+        
+    def extract_text_from_pdf(self, pdf_bytes: bytes) -> Dict[str, Any]:
+        """Extract text from PDF using multiple methods"""
+        try:
+            # Method 1: pdfplumber (better for complex layouts)
+            text = self._extract_with_pdfplumber(pdf_bytes)
+            
+            if not text.strip():
+                # Method 2: PyPDF2 (fallback)
+                text = self._extract_with_pypdf2(pdf_bytes)
+            
+            return {
+                "success": True,
+                "text": text,
+                "method": "pdfplumber" if text else "pypdf2"
+            }
+        except Exception as e:
+            logger.error(f"PDF text extraction failed: {e}")
+            return {
+                "success": False,
+                "error": str(e),
+                "text": ""
+            }
+    
+    def _extract_with_pdfplumber(self, pdf_bytes: bytes) -> str:
+        """Extract using pdfplumber for better layout preservation"""
+        text_content = []
+        with pdfplumber.open(io.BytesIO(pdf_bytes)) as pdf:
+            for page in pdf.pages:
+                page_text = page.extract_text()
+                if page_text:
+                    text_content.append(page_text)
+        return "\n\n".join(text_content)
+    
+    def _extract_with_pypdf2(self, pdf_bytes: bytes) -> str:
+        """Fallback extraction method"""
+        text_content = []
+        pdf_reader = PyPDF2.PdfReader(io.BytesIO(pdf_bytes))
+        for page in pdf_reader.pages:
+            text_content.append(page.extract_text())
+        return "\n\n".join(text_content)
     
     def _process_special_formatting(self, content: str) -> str:
         """Process special formatting markers after markdown conversion"""
