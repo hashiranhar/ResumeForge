@@ -9,12 +9,13 @@
     import Button from '$lib/components/common/Button.svelte';
     import Modal from '$lib/components/common/Modal.svelte';
     import Input from '$lib/components/common/Input.svelte';
-    import { Plus, FileText, Edit, Trash2, Download, Eye } from 'lucide-svelte';
+    import { Plus, FileText, Edit, Trash2, Download, Eye, Upload } from 'lucide-svelte'; // Added Upload
 
     // Modal state variables
     let showTemplateModal = false;
     let showNewCVModal = false;
     let showDeleteModal = false;
+    let showPDFImportModal = false; // NEW: PDF import modal state
     
     // CV creation variables
     let selectedTemplate = null;
@@ -24,6 +25,13 @@
     // Delete variables
     let cvToDelete = null;
     let deletingCV = false;
+
+    // NEW: PDF import variables
+    let pdfFile = null;
+    let pdfFileName = '';
+    let pdfCVName = '';
+    let pdfPreferences = 'professional';
+    let importingPDF = false;
 
     // Redirect if not authenticated (with browser check)
     $: if (browser && !$isAuthenticated) {
@@ -53,7 +61,38 @@
         showNewCVModal = true;
     }
 
-    // FIXED: Added keyboard event handler
+    // NEW: Handle PDF import flow
+    function handleImportPDF() {
+        showTemplateModal = false;
+        showPDFImportModal = true;
+    }
+
+    // NEW: Handle PDF file selection
+    function handlePDFFileSelect(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        // Validate file type
+        if (file.type !== 'application/pdf') {
+            addToast('Please select a PDF file', 'error');
+            return;
+        }
+
+        // Validate file size (5MB max)
+        const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+        if (file.size > maxSize) {
+            addToast('File size must be less than 5MB', 'error');
+            return;
+        }
+
+        pdfFile = file;
+        pdfFileName = file.name;
+        
+        // Auto-generate CV name from filename (remove .pdf extension)
+        pdfCVName = file.name.replace(/\.pdf$/i, '');
+    }
+
+    // Keyboard event handler
     function handleKeydown(event, callback) {
         if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault();
@@ -61,6 +100,7 @@
         }
     }
 
+    // Existing functions continue below...
     async function handleCreateCV() {
         if (!newCVName.trim()) {
             addToast('Please enter a name for your CV', 'error');
@@ -73,10 +113,8 @@
             let result;
             
             if (selectedTemplate) {
-                // Create CV from template using backend endpoint
                 result = await cvService.createCVFromTemplate(selectedTemplate.id, newCVName.trim());
             } else {
-                // Create blank CV
                 const blankContent = `# ${newCVName}\n\n## Contact Information\n\n## Summary\n\n## Experience\n\n## Education\n\n## Skills`;
                 result = await cvService.createCV(
                     newCVName.trim(),
@@ -253,24 +291,41 @@
 >
     <div class="space-y-6">
         <p class="text-gray-600 dark:text-gray-300">
-            Start with a professional template or create a blank CV
+            Start with a professional template, create a blank CV, or import from an existing PDF
         </p>
 
-        <!-- Blank option -->
-        <button
-            type="button"
-            class="w-full border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center hover:border-primary-300 dark:hover:border-primary-500 cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
-            on:click={handleCreateBlank}
-            aria-describedby="blank-template-desc"
-        >
-            <Plus class="h-12 w-12 text-gray-400 dark:text-gray-500 mx-auto mb-3" />
-            <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-1">Start from Blank</h3>
-            <p class="text-gray-600 dark:text-gray-300" id="blank-template-desc">
-                Create a CV from scratch with your own content
-            </p>
-        </button>
+        <!-- Split Options: Blank + PDF Import -->
+        <div class="grid grid-cols-2 gap-4">
+            <!-- Blank CV Option -->
+            <button
+                type="button"
+                class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center hover:border-primary-300 dark:hover:border-primary-500 cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+                on:click={handleCreateBlank}
+                aria-describedby="blank-template-desc"
+            >
+                <Plus class="h-12 w-12 text-gray-400 dark:text-gray-500 mx-auto mb-3" />
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-1">Start from Blank</h3>
+                <p class="text-sm text-gray-600 dark:text-gray-300" id="blank-template-desc">
+                    Create a CV from scratch with your own content
+                </p>
+            </button>
 
-        <!-- Templates -->
+            <!-- PDF Import Option -->
+            <button
+                type="button"
+                class="border-2 border-dashed border-orange-300 dark:border-orange-600 rounded-lg p-6 text-center hover:border-orange-400 dark:hover:border-orange-500 cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
+                on:click={handleImportPDF}
+                aria-describedby="pdf-import-desc"
+            >
+                <Upload class="h-12 w-12 text-orange-400 dark:text-orange-500 mx-auto mb-3" />
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-1">Import from PDF</h3>
+                <p class="text-sm text-gray-600 dark:text-gray-300" id="pdf-import-desc">
+                    Upload an existing PDF resume to convert
+                </p>
+            </button>
+        </div>
+
+        <!-- Templates (existing code remains the same) -->
         {#if $templates.length > 0}
             <div>
                 <h4 class="text-md font-medium text-gray-900 dark:text-white mb-4">
