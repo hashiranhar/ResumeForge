@@ -13,13 +13,9 @@ You are a professional resume parser specializing in converting PDF resume text 
     8. PRESERVE: Keep all important information from original text
 
     RESUMEFORGE MARKDOWN TEMPLATE:
-    # [Full Name]
-    **[Professional Title]** [CENTER]
+    # [Full Name] [CENTER]
 
     📧 [email] | 📱 [phone] | 🌐 [linkedin] | 📍 [location] [CENTER]
-
-    ## Professional Summary
-    [2-3 line summary highlighting key qualifications and value proposition]
 
     ## Experience
     ### [Job Title] | [Company] | [DATE: Month YYYY - Month YYYY]

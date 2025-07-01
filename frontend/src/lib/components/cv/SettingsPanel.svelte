@@ -1,12 +1,19 @@
 <script>
     import { draftCV } from '$lib/stores/cv.js';
-    import { Palette, Type, Ruler } from 'lucide-svelte';
+    import { Palette, Type, Ruler, FileText } from 'lucide-svelte';
     import Button from '$lib/components/common/Button.svelte';
 
     export const closeSettings = () => {};
 
     // Reactive settings
     $: settings = $draftCV.settings || {};
+
+    function updateCVName(name) {
+        draftCV.update(cv => ({
+            ...cv,
+            name: name
+        }));
+    }
 
     function updateSettings(key, value) {
         draftCV.update(cv => ({
@@ -44,6 +51,31 @@
 <div class="h-full flex flex-col bg-white dark:bg-gray-800">
     <!-- Settings Content - No duplicate header -->
     <div class="flex-1 overflow-y-auto p-4 space-y-6">
+        <!-- CV Information Section -->
+        <div class="space-y-4">
+            <div class="flex items-center space-x-2">
+                <FileText class="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                <h4 class="text-md font-medium text-gray-900 dark:text-white">CV Information</h4>
+            </div>
+            
+            <!-- CV Name -->
+            <div>
+                <label for="cv-name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    CV Name
+                </label>
+                <input
+                    id="cv-name"
+                    type="text"
+                    value={$draftCV.name || ''}
+                    on:input={(e) => updateCVName(e.target.value)}
+                    placeholder="Enter CV name..."
+                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                />
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    This name will be used for downloads and organization
+                </p>
+            </div>
+        </div>
         <!-- Typography Section -->
         <div class="space-y-4">
             <div class="flex items-center space-x-2">

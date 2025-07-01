@@ -1,6 +1,7 @@
 <script>
     import { onMount } from 'svelte';
     import { currentCV, draftCV, hasUnsavedChanges, cvService } from '$lib/stores/cv.js';
+    import { authenticatedFetch } from '$lib/stores/auth.js';
     import { addToast } from '$lib/stores/toast.js';
     import { Save, Download, Settings, MessageSquare, Edit3, Zap, Wand2, X, FileText } from 'lucide-svelte';
     import Button from '$lib/components/common/Button.svelte';
@@ -105,34 +106,34 @@
     }
 
     async function handleDemoDownloadMarkdown() {
-        if (!$draftCV.markdown_content?.trim()) {
-            addToast('Please add some content first', 'info');
-            return;
+            if (!$draftCV.markdown_content?.trim()) {
+                addToast('Please add some content first', 'info');
+                return;
+            }
+
+            downloadingMarkdown = true;
+            try {
+                // Create and download the markdown file
+                const blob = new Blob([$draftCV.markdown_content], { type: 'text/markdown' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${$draftCV.name || 'demo-cv'}.md`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                
+                addToast('Markdown file downloaded! Sign up for PDF exports and more features.', 'success');
+            } catch (error) {
+                addToast('Failed to download markdown', 'error');
+            } finally {
+                downloadingMarkdown = false;
+            }
         }
 
-        downloadingMarkdown = true;
-        try {
-            // Create and download the markdown file
-            const blob = new Blob([$draftCV.markdown_content], { type: 'text/markdown' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `${$draftCV.name || 'demo-cv'}.md`;
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
-            
-            addToast('Markdown file downloaded! Sign up for PDF exports and more features.', 'success');
-        } catch (error) {
-            addToast('Failed to download markdown', 'error');
-        } finally {
-            downloadingMarkdown = false;
-        }
-    }
-
-    // Regular download functions for authenticated users
-    async function handleDownloadPDF() {
+        // Regular download functions for authenticated users
+        async function handleDownloadPDF() {
         if (!$currentCV) {
             addToast('Please save your CV first', 'info');
             return;
@@ -140,14 +141,34 @@
 
         downloadingPDF = true;
         try {
-            const result = await cvService.downloadPDF($currentCV.id, `${$currentCV.name}.pdf`);
-            if (result.success) {
-                addToast('PDF downloaded successfully', 'success');
-            } else {
-                addToast(result.error || 'Failed to download PDF', 'error');
+            addToast('Generating PDF...', 'info');
+            
+            const response = await authenticatedFetch(`/api/cvs/${$currentCV.id}/pdf`);
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.detail || 'Failed to generate PDF');
             }
+
+            // Get the PDF blob
+            const blob = await response.blob();
+            
+            // Create download link
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${$currentCV.name}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            
+            // Cleanup
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            
+            addToast('PDF downloaded successfully!', 'success');
         } catch (error) {
-            addToast('Failed to download PDF', 'error');
+            console.error('PDF download error:', error);
+            addToast(error.message || 'Failed to download PDF', 'error');
         } finally {
             downloadingPDF = false;
         }

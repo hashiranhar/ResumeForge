@@ -35,8 +35,9 @@ export const draftCV = writable({
 export const hasUnsavedChanges = derived(
     [currentCV, draftCV],
     ([current, draft]) => {
-        if (!current || !current.id) return false; // Fixed: check if current.id exists
-        return current.markdown_content !== draft.markdown_content ||
+        if (!current || !current.id) return false;
+        return current.name !== draft.name ||
+               current.markdown_content !== draft.markdown_content ||
                JSON.stringify(current.settings) !== JSON.stringify(draft.settings);
     }
 );
@@ -327,7 +328,7 @@ export const cvService = {
     },
 
     // Auto-save functionality
-    async autoSave(cvId, content, settings) {
+    async autoSave(cvId, name, content, settings) {
         if (!cvId || cvId === 'null' || cvId === 'undefined' || cvId === null) {
             return { 
                 success: false, 
@@ -339,6 +340,7 @@ export const cvService = {
             const response = await authenticatedFetch(`/api/cvs/${cvId}`, {
                 method: 'PUT',
                 body: JSON.stringify({
+                    name,
                     markdown_content: content,
                     settings
                 })
