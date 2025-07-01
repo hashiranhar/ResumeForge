@@ -209,13 +209,16 @@
             formData.append('preferences', pdfPreferences);
 
             // Make API call to convert PDF
-            const response = await authenticatedFetch('/api/pdf/create-cv', {
+            // Note: For FormData uploads, we need to manually handle the request to avoid Content-Type issues
+            const currentToken = localStorage.getItem('resumeforge_token');
+            
+            const response = await fetch('/api/pdf/create-cv', {
                 method: 'POST',
-                body: formData,
-                // Don't set Content-Type header - let browser set it for FormData
                 headers: {
-                    // Remove Content-Type from headers to let browser handle multipart/form-data
-                }
+                    'Authorization': `Bearer ${currentToken}`
+                    // DON'T set Content-Type - let browser handle it for FormData
+                },
+                body: formData
             });
 
             if (!response.ok) {
@@ -226,8 +229,8 @@
             const result = await response.json();
 
             if (result.success) {
-                // Update CVs list with new CV
-                cvs.update(list => [result.cv, ...list]);
+                // Refresh the CVs list to include the new CV
+                await cvService.loadCVs();
                 
                 // Close modal and reset state
                 showPDFImportModal = false;
