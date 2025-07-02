@@ -26,11 +26,9 @@
     });
 
     onMount(() => {
-        // Clear chat history when component mounts
-        llmService.clearChat();
-        
-        // Add welcome message
-        llmService.addToChatHistory('assistant', 'Hi! I\'m ForgeBot, your AI CV assistant. I can help you improve your CV content, suggest better phrasing, or answer questions about your resume. How can I help you today?');
+        if ($chatHistory.length === 0) {
+        llmService.addToChatHistory('assistant', 'Hi! I\'m your AI CV assistant. I can help you improve your CV content, suggest better phrasing, or answer questions about your resume. How can I help you today?');
+    }
     });
 
     async function sendMessage() {

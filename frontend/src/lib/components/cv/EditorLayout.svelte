@@ -1,7 +1,8 @@
 <script>
-    import { onMount } from 'svelte';
+    import { onMount, onDestroy } from 'svelte';
     import { currentCV, draftCV, hasUnsavedChanges, cvService } from '$lib/stores/cv.js';
     import { authenticatedFetch } from '$lib/stores/auth.js';
+    import { llmService } from '$lib/stores/llm.js';
     import { addToast } from '$lib/stores/toast.js';
     import { Save, Download, Settings, MessageSquare, Edit3, Zap, Wand2, X, FileText } from 'lucide-svelte';
     import Button from '$lib/components/common/Button.svelte';
@@ -11,7 +12,6 @@
     import ChatPanel from './ChatPanel.svelte';
     import ATSPanel from './ATSPanel.svelte';
     import InlineEditPanel from './InlineEditPanel.svelte';
-
     export let isDemo = false;
     export let onSave = () => {};
     export let saving = false;
@@ -290,6 +290,13 @@
             document.removeEventListener('mousemove', handleMouseMove);
             document.removeEventListener('mouseup', handleMouseUp);
         };
+    });
+
+    onDestroy(() => {
+        // Clear AI data when leaving the editor
+        llmService.clearChat();
+        llmService.clearInlineEditHistory();
+        llmService.clearATS();
     });
 </script>
 

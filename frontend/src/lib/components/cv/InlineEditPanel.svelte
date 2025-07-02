@@ -34,8 +34,6 @@
     ];
 
     onMount(() => {
-        // Clear edit history when component mounts
-        llmService.clearInlineEditHistory();
     });
 
     async function handleInlineEdit() {
@@ -131,34 +129,46 @@
             </select>
         </div>
 
-        <!-- Edit Instruction -->
-        <div>
-            <label for="edit-instruction" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                What would you like to improve?
-            </label>
-            <div class="flex space-x-2">
-                <div class="flex-1">
-                    <textarea
-                        id="edit-instruction"
-                        bind:value={editInstruction}
-                        on:keypress={handleKeyPress}
-                        placeholder="e.g. Make my experience section more quantified and impactful..."
-                        class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 rounded-lg resize-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400 focus:border-primary-500 dark:focus:border-primary-400"
-                        rows="3"
-                        disabled={$isInlineEditing}
-                    ></textarea>
-                </div>
+        <!-- Just replace the Edit Instruction section in your existing file with this: -->
+
+    <!-- Edit Instruction -->
+    <div>
+        <label for="edit-instruction" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            What would you like to improve?
+        </label>
+        
+        <!-- Textarea with integrated send button -->
+        <div class="relative">
+            <textarea
+                id="edit-instruction"
+                bind:value={editInstruction}
+                on:keypress={handleKeyPress}
+                placeholder="e.g. Make my experience section more quantified and impactful..."
+                class="w-full px-3 py-3 pr-16 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 rounded-lg resize-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400 focus:border-primary-500 dark:focus:border-primary-400"
+                rows="3"
+                disabled={$isInlineEditing}
+            ></textarea>
+            
+            <!-- Send Button - positioned inside textarea -->
+            <div class="absolute bottom-3 right-3">
                 <Button
                     size="sm"
                     on:click={handleInlineEdit}
                     disabled={!editInstruction.trim() || $isInlineEditing}
                     loading={$isInlineEditing}
-                    className="self-end"
+                    className="h-8 w-8 p-0 rounded-full"
                 >
-                    <Wand2 class="h-4 w-4" />
+                    {#if $isInlineEditing}
+                        <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    {:else}
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                    {/if}
                 </Button>
             </div>
         </div>
+    </div>
 
     </div>
 
