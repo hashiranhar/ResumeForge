@@ -5,7 +5,8 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.schemas.auth import UserRegister, UserLogin, Token, UserResponse, ForgotPasswordRequest, ResetPasswordRequest
 from app.crud.user import create_user, authenticate_user, get_user_by_email, get_user_by_id, update_last_login
-from app.core.security import create_access_token, verify_token, get_password_hash, get_current_user
+from app.core.auth import get_current_user
+from app.core.security import create_access_token, verify_token, get_password_hash
 from app.core.config import settings
 from app.services.email import send_reset_email
 
