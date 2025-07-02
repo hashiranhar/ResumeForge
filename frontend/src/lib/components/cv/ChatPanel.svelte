@@ -4,8 +4,9 @@
     import DOMPurify from 'dompurify';
     import { chatHistory, isLLMLoading, llmService } from '$lib/stores/llm.js';
     import { currentCV, draftCV } from '$lib/stores/cv.js';
+    import { user } from '$lib/stores/auth.js';
     import { addToast } from '$lib/stores/toast.js';
-    import { MessageSquare, Send, Bot, User, Lightbulb } from 'lucide-svelte';
+    import { MessageSquare, Send, Bot, User } from 'lucide-svelte';
     import Button from '$lib/components/common/Button.svelte';
 
     let messageInput = '';
@@ -26,6 +27,7 @@
     });
 
     onMount(() => {
+        // Add welcome message if chat is empty
         if ($chatHistory.length === 0) {
         llmService.addToChatHistory('assistant', 'Hi! I\'m your AI CV assistant. I can help you improve your CV content, suggest better phrasing, or answer questions about your resume. How can I help you today?');
     }
@@ -35,7 +37,14 @@
         if (!messageInput.trim() || $isLLMLoading) return;
 
         const message = messageInput.trim();
+        const timestamp = new Date().toISOString();
         messageInput = '';
+
+        // Add user message immediately to chat history
+        chatHistory.update(history => [
+            ...history,
+            { role: 'user', content: message, timestamp }
+        ]);
 
         try {
             const result = await llmService.chatAboutCV(
@@ -44,7 +53,13 @@
                 $draftCV.markdown_content
             );
 
-            if (!result.success) {
+            if (result.success) {
+                // Add assistant response
+                chatHistory.update(history => [
+                    ...history,
+                    { role: 'assistant', content: result.reply, timestamp: new Date().toISOString() }
+                ]);
+            } else {
                 addToast(result.error || 'Failed to send message', 'error');
             }
         } catch (error) {
@@ -75,15 +90,10 @@
         }
     }
 
-    // Quick action buttons
-    const quickActions = [
-        'How can I improve my professional summary?',
-        'Make my experience section more impactful',
-        'Suggest better action verbs for my achievements',
-        'How can I quantify my accomplishments?',
-        'Review my skills section',
-        'Help me write a cover letter introduction'
-    ];
+    // Function to get user display name
+    function getUserDisplayName() {
+        return $user?.username || $user?.email || 'User';
+    }
 </script>
 
 <!-- FIXED: Added dark mode styling to entire component -->
@@ -112,40 +122,47 @@
             </div>
         {:else}
             {#each $chatHistory as message}
-                <div class="flex {message.role === 'user' ? 'justify-end' : 'justify-start'}">
-                    <div class="flex items-start space-x-2 max-w-xs lg:max-w-md">
+                <div class="flex {message.role === 'user' ? 'justify-end' : 'justify-start'} mb-4">
+                    <div class="flex items-start space-x-3 max-w-[80%]">
                         {#if message.role === 'assistant'}
-                            <!-- AI avatar - FIXED: Added dark mode styling -->
-                            <div class="flex-shrink-0 w-6 h-6 bg-primary-100 dark:bg-primary-900 rounded-full flex items-center justify-center">
-                                <Bot class="h-4 w-4 text-primary-600 dark:text-primary-400" />
+                            <!-- AI avatar -->
+                            <div class="flex-shrink-0 w-8 h-8 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
+                                <Bot class="h-4 w-4 text-blue-600 dark:text-blue-400" />
                             </div>
                         {/if}
                         
-                        <!-- Message bubble - FIXED: Added markdown rendering and better styling -->
-                        <div class="px-3 py-2 rounded-lg {message.role === 'user' 
-                            ? 'bg-primary-600 dark:bg-primary-700 text-white' 
-                            : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white'}">
-                            {#if message.role === 'assistant'}
-                                <!-- Render markdown for assistant messages -->
-                                <div class="text-sm prose prose-sm dark:prose-invert max-w-none
-                                    prose-headings:text-gray-900 dark:prose-headings:text-white
-                                    prose-strong:text-gray-900 dark:prose-strong:text-white
-                                    prose-code:text-gray-900 dark:prose-code:text-white
-                                    prose-code:bg-gray-200 dark:prose-code:bg-gray-700
-                                    prose-pre:bg-gray-200 dark:prose-pre:bg-gray-700
-                                    prose-blockquote:text-gray-700 dark:prose-blockquote:text-gray-300
-                                    prose-li:text-gray-900 dark:prose-li:text-white">
-                                    {@html renderMarkdown(message.content)}
-                                </div>
-                            {:else}
-                                <!-- Plain text for user messages -->
-                                <p class="text-sm whitespace-pre-wrap">{message.content}</p>
-                            {/if}
+                        <div class="flex flex-col space-y-1">
+                            <!-- Bot name or User name -->
+                            <div class="text-xs text-gray-500 dark:text-gray-400 {message.role === 'user' ? 'text-right' : 'text-left'}">
+                                {message.role === 'assistant' ? 'ForgeBot' : getUserDisplayName()}
+                            </div>
+                            
+                            <!-- Message bubble with improved styling -->
+                            <div class="relative px-4 py-3 rounded-2xl shadow-sm {message.role === 'user' 
+                                ? 'bg-blue-500 text-white rounded-br-md' 
+                                : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-bl-md'}">
+                                {#if message.role === 'assistant'}
+                                    <!-- Render markdown for assistant messages -->
+                                    <div class="text-sm prose prose-sm dark:prose-invert max-w-none
+                                        prose-headings:text-gray-900 dark:prose-headings:text-white
+                                        prose-strong:text-gray-900 dark:prose-strong:text-white
+                                        prose-code:text-gray-900 dark:prose-code:text-white
+                                        prose-code:bg-gray-200 dark:prose-code:bg-gray-700
+                                        prose-pre:bg-gray-200 dark:prose-pre:bg-gray-700
+                                        prose-blockquote:text-gray-700 dark:prose-blockquote:text-gray-300
+                                        prose-li:text-gray-900 dark:prose-li:text-white">
+                                        {@html renderMarkdown(message.content)}
+                                    </div>
+                                {:else}
+                                    <!-- Plain text for user messages -->
+                                    <p class="text-sm whitespace-pre-wrap">{message.content}</p>
+                                {/if}
+                            </div>
                         </div>
                         
                         {#if message.role === 'user'}
-                            <!-- User avatar - FIXED: Added dark mode styling -->
-                            <div class="flex-shrink-0 w-6 h-6 bg-gray-600 dark:bg-gray-500 rounded-full flex items-center justify-center">
+                            <!-- User avatar -->
+                            <div class="flex-shrink-0 w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
                                 <User class="h-4 w-4 text-white" />
                             </div>
                         {/if}
@@ -154,44 +171,29 @@
             {/each}
         {/if}
 
-        <!-- Loading indicator - FIXED: Added dark mode styling -->
+        <!-- Loading indicator -->
         {#if $isLLMLoading}
-            <div class="flex justify-start">
-                <div class="flex items-start space-x-2">
-                    <div class="flex-shrink-0 w-6 h-6 bg-primary-100 dark:bg-primary-900 rounded-full flex items-center justify-center">
-                        <Bot class="h-4 w-4 text-primary-600 dark:text-primary-400" />
+            <div class="flex justify-start mb-4">
+                <div class="flex items-start space-x-3 max-w-[80%]">
+                    <div class="flex-shrink-0 w-8 h-8 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
+                        <Bot class="h-4 w-4 text-blue-600 dark:text-blue-400" />
                     </div>
-                    <div class="bg-gray-100 dark:bg-gray-800 rounded-lg px-3 py-2">
-                        <div class="flex space-x-1">
-                            <div class="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce"></div>
-                            <div class="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
-                            <div class="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+                    <div class="flex flex-col space-y-1">
+                        <div class="text-xs text-gray-500 dark:text-gray-400">
+                            ForgeBot
+                        </div>
+                        <div class="bg-gray-100 dark:bg-gray-800 rounded-2xl rounded-bl-md px-4 py-3 shadow-sm">
+                            <div class="flex space-x-1">
+                                <div class="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce"></div>
+                                <div class="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
+                                <div class="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         {/if}
     </div>
-
-    <!-- Quick Actions - FIXED: Added dark mode styling -->
-    {#if $chatHistory.length <= 1}
-        <div class="border-t border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-900">
-            <div class="flex items-center space-x-2 mb-3">
-                <Lightbulb class="h-4 w-4 text-yellow-500 dark:text-yellow-400" />
-                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Quick suggestions:</span>
-            </div>
-            <div class="space-y-2">
-                {#each quickActions.slice(0, 3) as action}
-                    <button
-                        class="w-full text-left p-2 text-sm bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white rounded-lg transition-colors"
-                        on:click={() => handleSuggestionClick(action)}
-                    >
-                        {action}
-                    </button>
-                {/each}
-            </div>
-        </div>
-    {/if}
 
     <!-- Message Input - FIXED: Added dark mode styling -->
     <div class="border-t border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-900">
