@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import auth, cvs, templates, llm
+from app.routers import auth, cvs, templates, llm, pdf
 
 app = FastAPI(
     title="ResumeForge API",
@@ -20,6 +20,7 @@ app.include_router(auth.router)
 app.include_router(cvs.router)
 app.include_router(templates.router)
 app.include_router(llm.router)
+app.include_router(pdf.router)
 
 @app.get("/")
 def root():

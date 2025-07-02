@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en" class="%sveltekit.theme%">
+    <head>
+        <meta charset="utf-8" />
+        <link rel="icon" href="%sveltekit.assets%/favicon.png" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+        <meta name="theme-color" content="#0a0a0a" media="(prefers-color-scheme: dark)" />
+        %sveltekit.head%
+        
+        <script>
+            // Prevent flash of wrong theme
+            const darkMode = localStorage.getItem('darkMode');
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const shouldBeDark = darkMode === 'true' || (darkMode === null && prefersDark);
+            
+            if (shouldBeDark) {
+                document.documentElement.classList.add('dark');
+                document.documentElement.style.backgroundColor = '#0a0a0a';
+                document.documentElement.style.color = '#ffffff';
+            } else {
+                document.documentElement.style.backgroundColor = '#ffffff';
+                document.documentElement.style.color = '#000000';
+            }
+        </script>
+    </head>
+    <body data-sveltekit-preload-data="hover" class="bg-white dark:bg-black text-gray-900 dark:text-white min-h-screen">
+        <div style="display: contents">%sveltekit.body%</div>
+    </body>
+</html>
