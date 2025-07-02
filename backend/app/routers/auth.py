@@ -1,17 +1,15 @@
 from datetime import timedelta
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Request
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from pydantic import BaseModel, EmailStr
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.schemas.auth import UserRegister, UserLogin, Token, UserResponse
+from app.schemas.auth import UserRegister, UserLogin, Token, UserResponse, ForgotPasswordRequest, ResetPasswordRequest
 from app.crud.user import create_user, authenticate_user, get_user_by_email, get_user_by_id, update_last_login
-from app.core.security import create_access_token, verify_token, get_password_hash
+from app.core.security import create_access_token, verify_token, get_password_hash, get_current_user
 from app.core.config import settings
-import smtplib
+from app.services.email import send_reset_email
 
 router = APIRouter(prefix="/api/auth", tags=["authentication"])
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login")
 
 @router.post("/register", response_model=UserResponse)
 def register(user_data: UserRegister, db: Session = Depends(get_db)):
@@ -50,37 +48,10 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     
     return {"access_token": access_token, "token_type": "bearer"}
 
-def get_current_user(
-    token: str = Depends(oauth2_scheme),
-    db: Session = Depends(get_db)
-) -> UserResponse:
-    """Get current authenticated user"""
-    user_id = verify_token(token)
-    
-    if user_id is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Could not validate credentials",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    
-    user = get_user_by_id(db, user_id)
-    if user is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User not found",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    
-    return user
-
 @router.get("/me", response_model=UserResponse)
 def get_me(current_user: UserResponse = Depends(get_current_user)):
     """Get current user info"""
     return current_user
-
-class ForgotPasswordRequest(BaseModel):
-    email: EmailStr
 
 @router.post("/forgot-password")
 async def forgot_password(
@@ -106,25 +77,6 @@ async def forgot_password(
     )
 
     return {"message": "If your email is registered, a reset link has been sent."}
-
-def send_reset_email(email: str, reset_link: str):
-    subject = "Reset your ResumeForge password"
-    body = f"Click the link below to reset your password:\n\n{reset_link}\n\nIf you did not request this, ignore this email."
-    message = f"Subject: {subject}\n\n{body}"
-
-    # EXAMPLE using SMTP, replace with actual SMTP email stuff
-    try:
-        with smtplib.SMTP("smtp.example.com", 587) as server:
-            server.starttls()
-            server.login("your@email.com", "yourpassword")
-            server.sendmail("your@email.com", email, message)
-    except Exception as e:
-        print(f"Failed to send email: {e}")
-        raise HTTPException(status_code=500, detail="Failed to send reset email")
-
-class ResetPasswordRequest(BaseModel):
-    token: str
-    new_password: str
 
 @router.post("/reset-password")
 async def reset_password(request: ResetPasswordRequest, db: Session = Depends(get_db)):
