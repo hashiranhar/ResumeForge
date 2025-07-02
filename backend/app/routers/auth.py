@@ -67,7 +67,7 @@ async def forgot_password(
     # Generate a reset token (JWT with short expiry)
     token = create_access_token(
         subject=str(user.id),
-        expires_delta=settings.password_reset_token_expire_minutes
+        expires_delta=timedelta(minutes=settings.password_reset_token_expire_minutes)
     )
 
     reset_link = f"http://localhost:5173/auth/reset-password?token={token}"
