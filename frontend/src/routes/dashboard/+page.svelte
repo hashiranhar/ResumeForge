@@ -177,9 +177,41 @@
     }
 
     async function handleDownloadPDF(cv) {
+        console.log('Download button clicked for CV:', cv.name);
+        
         try {
-            await cvService.downloadPDF(cv.id, `${cv.name}.pdf`);
-            addToast('PDF downloaded successfully', 'success');
+            addToast('Generating PDF...', 'info');
+            
+            const response = await authenticatedFetch(`/api/cvs/${cv.id}/pdf`);
+            
+            console.log('Response status:', response.status);
+            
+            if (!response.ok) {
+                throw new Error(`Failed to generate PDF: ${response.status}`);
+            }
+
+            const blob = await response.blob();
+            console.log('Blob size:', blob.size);
+            
+            if (blob.size === 0) {
+                throw new Error('Generated PDF is empty');
+            }
+            
+            // Create download
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${cv.name}.pdf`;
+            a.style.display = 'none';
+            
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            
+            window.URL.revokeObjectURL(url);
+            
+            addToast('PDF downloaded successfully!', 'success');
+            
         } catch (error) {
             console.error('PDF download error:', error);
             addToast(error.message || 'Failed to download PDF', 'error');

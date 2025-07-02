@@ -3,13 +3,12 @@
     import { inlineEditHistory, isInlineEditing, llmService } from '$lib/stores/llm.js';
     import { currentCV, draftCV } from '$lib/stores/cv.js';
     import { addToast } from '$lib/stores/toast.js';
-    import { Edit3, Wand2, Send, History, CheckCircle, Clock, Sparkles, Target } from 'lucide-svelte';
+    import { Edit3, Wand2, Send, History, CheckCircle, Clock, Sparkles, Target, Undo2 } from 'lucide-svelte';
     import Button from '$lib/components/common/Button.svelte';
     import Input from '$lib/components/common/Input.svelte';
 
     let editInstruction = '';
     let selectedSection = '';
-    let autoSave = true;
 
     // CV sections for targeting specific areas
     const cvSections = [
@@ -34,8 +33,6 @@
     ];
 
     onMount(() => {
-        // Clear edit history when component mounts
-        llmService.clearInlineEditHistory();
     });
 
     async function handleInlineEdit() {
@@ -53,8 +50,7 @@
             const result = await llmService.inlineEdit(
                 $currentCV.id,
                 editInstruction.trim(),
-                selectedSection || null,
-                autoSave
+                selectedSection || null
             );
 
             if (result.success) {
@@ -64,12 +60,7 @@
                     markdown_content: result.editedContent
                 }));
 
-                addToast(
-                    result.autoSaved 
-                        ? 'CV edited and saved successfully!' 
-                        : 'CV edited successfully!', 
-                    'success'
-                );
+                addToast('CV edited successfully! Use Ctrl+S to save changes.', 'success');
 
                 // Clear the instruction
                 editInstruction = '';
@@ -98,6 +89,46 @@
             hour: '2-digit', 
             minute: '2-digit' 
         });
+    }
+
+    async function handleUndoEdit(editId: string) {
+        try {
+            // Find the edit index to determine how many edits will be undone
+            const editIndex = $inlineEditHistory.findIndex(edit => edit.id === editId);
+            const editsToUndo = $inlineEditHistory.length - editIndex;
+            
+            // Show confirmation if multiple edits will be undone
+            if (editsToUndo > 1) {
+                const confirmed = confirm(
+                    `This will undo ${editsToUndo} edits (including all edits made after this one). Continue?`
+                );
+                if (!confirmed) return;
+            }
+            
+            const result = await llmService.undoInlineEdit(editId);
+            
+            if (result.success) {
+                const message = result.undoneCount === 1 
+                    ? 'Edit undone successfully' 
+                    : `${result.undoneCount} edits undone successfully`;
+                addToast(message, 'success');
+            } else {
+                addToast(result.error || 'Failed to undo edit', 'error');
+            }
+        } catch (error) {
+            addToast('Failed to undo edit', 'error');
+        }
+    }
+
+    function getUndoTooltip(edit: any, history: any[]): string {
+        const editIndex = history.findIndex(e => e.id === edit.id);
+        const editsToUndo = history.length - editIndex;
+        
+        if (editsToUndo === 1) {
+            return 'Undo this edit';
+        } else {
+            return `Undo this edit and ${editsToUndo - 1} newer edit${editsToUndo - 1 > 1 ? 's' : ''}`;
+        }
     }
 </script>
 
@@ -136,27 +167,40 @@
             <label for="edit-instruction" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 What would you like to improve?
             </label>
-            <div class="flex space-x-2">
-                <div class="flex-1">
-                    <textarea
-                        id="edit-instruction"
-                        bind:value={editInstruction}
-                        on:keypress={handleKeyPress}
-                        placeholder="e.g. Make my experience section more quantified and impactful..."
-                        class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 rounded-lg resize-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400 focus:border-primary-500 dark:focus:border-primary-400"
-                        rows="3"
-                        disabled={$isInlineEditing}
-                    ></textarea>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                Changes will be applied to the editor. Use Ctrl+S or the Save button to save to your CV. Note: Multiple unsaved edits will override each other.
+            </p>
+            
+            <!-- Textarea with integrated send button -->
+            <div class="relative">
+                <textarea
+                    id="edit-instruction"
+                    bind:value={editInstruction}
+                    on:keypress={handleKeyPress}
+                    placeholder="e.g. Make my experience section more quantified and impactful..."
+                    class="w-full px-3 py-3 pr-16 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 rounded-lg resize-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400 focus:border-primary-500 dark:focus:border-primary-400"
+                    rows="3"
+                    disabled={$isInlineEditing}
+                ></textarea>
+                
+                <!-- Send Button - positioned inside textarea -->
+                <div class="absolute bottom-3 right-3">
+                    <Button
+                        size="sm"
+                        on:click={handleInlineEdit}
+                        disabled={!editInstruction.trim() || $isInlineEditing}
+                        loading={$isInlineEditing}
+                        className="h-8 w-8 p-0 rounded-full"
+                    >
+                        {#if $isInlineEditing}
+                            <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        {:else}
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                        {/if}
+                    </Button>
                 </div>
-                <Button
-                    size="sm"
-                    on:click={handleInlineEdit}
-                    disabled={!editInstruction.trim() || $isInlineEditing}
-                    loading={$isInlineEditing}
-                    className="self-end"
-                >
-                    <Wand2 class="h-4 w-4" />
-                </Button>
             </div>
         </div>
 
@@ -174,42 +218,6 @@
                 <p class="text-gray-600 dark:text-gray-300 mb-6 max-w-sm mx-auto">
                     Get instant, intelligent improvements to your CV content. Just describe what you want to change.
                 </p>
-
-                <!-- Quick Edit Suggestions -->
-                <div class="space-y-3">
-                    <div class="flex items-center justify-center space-x-2 mb-4">
-                        <Target class="h-4 w-4 text-primary-500" />
-                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Quick improvements:</span>
-                    </div>
-                    {#each quickEdits.slice(0, 3) as quickEdit}
-                        <button
-                            class="w-full text-left p-3 text-sm bg-gray-50 dark:bg-gray-800 hover:bg-primary-50 dark:hover:bg-primary-900 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 hover:border-primary-300 dark:hover:border-primary-600 rounded-lg transition-colors"
-                            on:click={() => handleQuickEdit(quickEdit)}
-                            disabled={$isInlineEditing}
-                        >
-                            <div class="flex items-center space-x-2">
-                                <Wand2 class="h-4 w-4 text-primary-500" />
-                                <span>{quickEdit}</span>
-                            </div>
-                        </button>
-                    {/each}
-                </div>
-
-                <!-- Features -->
-                <div class="mt-8 space-y-2 text-sm text-gray-500 dark:text-gray-400">
-                    <div class="flex items-center justify-center space-x-2">
-                        <CheckCircle class="h-4 w-4 text-green-500" />
-                        <span>Real-time content editing</span>
-                    </div>
-                    <div class="flex items-center justify-center space-x-2">
-                        <CheckCircle class="h-4 w-4 text-green-500" />
-                        <span>Section-specific improvements</span>
-                    </div>
-                    <div class="flex items-center justify-center space-x-2">
-                        <CheckCircle class="h-4 w-4 text-green-500" />
-                        <span>Professional language enhancement</span>
-                    </div>
-                </div>
             </div>
         {:else}
             <!-- Edit History -->
@@ -227,18 +235,26 @@
                                 <span class="text-sm text-gray-600 dark:text-gray-300">
                                     {formatTimestamp(edit.timestamp)}
                                 </span>
-                                {#if edit.autoSaved}
-                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">
-                                        <CheckCircle class="h-3 w-3 mr-1" />
-                                        Saved
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                {#if edit.section}
+                                    <span class="text-xs bg-primary-100 dark:bg-primary-900 text-primary-800 dark:text-primary-200 px-2 py-1 rounded-full">
+                                        {cvSections.find(s => s.value === edit.section)?.label || edit.section}
                                     </span>
                                 {/if}
-                            </div>
-                            {#if edit.section}
-                                <span class="text-xs bg-primary-100 dark:bg-primary-900 text-primary-800 dark:text-primary-200 px-2 py-1 rounded-full">
-                                    {cvSections.find(s => s.value === edit.section)?.label || edit.section}
+                                <!-- Undo Button -->
+                                <span title={getUndoTooltip(edit, $inlineEditHistory)}>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        on:click={() => handleUndoEdit(edit.id)}
+                                        className="text-xs px-2 py-1 h-6"
+                                    >
+                                        <Undo2 class="h-3 w-3 mr-1" />
+                                        Undo
+                                    </Button>
                                 </span>
-                            {/if}
+                            </div>
                         </div>
 
                         <p class="text-sm text-gray-900 dark:text-white mb-2">

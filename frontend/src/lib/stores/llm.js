@@ -1,4 +1,4 @@
-import { writable } from 'svelte/store';
+import { writable, get } from 'svelte/store';
 import { authenticatedFetch } from './auth.js';
 
 // LLM state
@@ -17,9 +17,14 @@ export const llmService = {
         llmError.set(null);
         
         try {
-            // Get current chat history
+            // Get current chat history (exclude timestamps for API)
             let currentHistory;
-            chatHistory.subscribe(value => currentHistory = value)();
+            chatHistory.subscribe(value => {
+                currentHistory = value.map(msg => ({
+                    role: msg.role,
+                    content: msg.content
+                }));
+            })();
             
             const response = await authenticatedFetch('/api/llm/chat', {
                 method: 'POST',
@@ -38,13 +43,6 @@ export const llmService = {
             
             const data = await response.json();
             
-            // Update chat history
-            chatHistory.update(history => [
-                ...history,
-                { role: 'user', content: message },
-                { role: 'assistant', content: data.reply }
-            ]);
-            
             return { 
                 success: true, 
                 reply: data.reply, 
@@ -59,18 +57,22 @@ export const llmService = {
     },
 
     // Function 2: Inline edit CV content
-    async inlineEdit(cvId, instruction, section = null, autoSave = true) {
+    async inlineEdit(cvId, instruction, section = null) {
         isInlineEditing.set(true);
         llmError.set(null);
         
         try {
+            // Import draftCV from cv store to get current content
+            const { draftCV } = await import('./cv.js');
+            const currentContent = get(draftCV).markdown_content;
+            
             const response = await authenticatedFetch('/api/llm/inline-edit', {
                 method: 'POST',
                 body: JSON.stringify({
                     cv_id: cvId,
                     instruction,
                     section,
-                    auto_save: autoSave
+                    auto_save: false // Always false - no auto-save
                 })
             });
             
@@ -81,23 +83,23 @@ export const llmService = {
             
             const data = await response.json();
             
-            // Add to inline edit history
+            // Add to inline edit history with previous content
             inlineEditHistory.update(history => [
                 ...history,
                 {
+                    id: Date.now().toString(),
                     timestamp: new Date().toISOString(),
                     instruction,
                     section,
                     changesMade: data.changes_made || [],
-                    autoSaved: data.auto_saved
+                    previousContent: currentContent
                 }
             ]);
             
             return {
                 success: true,
                 editedContent: data.edited_content,
-                changesMade: data.changes_made || [],
-                autoSaved: data.auto_saved
+                changesMade: data.changes_made || []
             };
         } catch (err) {
             llmError.set(err.message);
@@ -107,7 +109,45 @@ export const llmService = {
         }
     },
 
-    // FIXED: Function 3: ATS Score Analysis
+    // Undo inline edit with cascading logic
+    async undoInlineEdit(editId) {
+        try {
+            // Import draftCV from cv store
+            const { draftCV } = await import('./cv.js');
+            
+            const history = get(inlineEditHistory);
+            const editIndex = history.findIndex(edit => edit.id === editId);
+            
+            if (editIndex === -1) {
+                return { success: false, error: 'Edit not found' };
+            }
+            
+            const editToUndo = history[editIndex];
+            
+            // Count how many edits will be undone (the selected edit + all newer ones)
+            const editsToUndo = history.length - editIndex;
+            
+            // Update draft CV with the content from before the selected edit
+            draftCV.update(draft => ({
+                ...draft,
+                markdown_content: editToUndo.previousContent
+            }));
+            
+            // Remove the selected edit and all edits that came after it
+            inlineEditHistory.update(history => 
+                history.slice(0, editIndex)
+            );
+            
+            return { 
+                success: true, 
+                undoneCount: editsToUndo 
+            };
+        } catch (error) {
+            return { success: false, error: error.message };
+        }
+    },
+
+    // Function 3: ATS Score Analysis
     async analyzeATS(cvId, cvContent, targetRole, jobDescription) {
         isLLMLoading.set(true);
         llmError.set(null);
