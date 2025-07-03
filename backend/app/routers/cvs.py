@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Dict, Any
 from app.database import get_db
 from app.schemas.cv import CVCreate, CVUpdate, CVResponse, CVListResponse
 from app.schemas.auth import UserResponse
@@ -9,19 +9,21 @@ from app.crud.cv import get_user_cvs, get_cv_by_id, create_cv, update_cv, delete
 from app.routers.auth import get_current_user
 from app.services.pdf_service import pdf_service
 from app.services.rate_limiting_service import check_cv_creation_rate_limit
+from app.services.cv_access_control import CVAccessControlService
 import logging
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/cvs", tags=["cvs"])
 
-@router.get("/", response_model=List[CVListResponse])
+@router.get("/", response_model=List[Dict[str, Any]])
 def get_cvs(
     current_user: UserResponse = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get all CVs for the current user"""
-    cvs = get_user_cvs(db, str(current_user.id))
-    return cvs
+    """Get all CVs for the current user with access control info"""
+    access_service = CVAccessControlService(db)
+    cvs_with_access = access_service.get_user_cvs_with_access_info(str(current_user.id))
+    return cvs_with_access
 
 @router.get("/{cv_id}", response_model=CVResponse)
 def get_cv(
@@ -62,7 +64,12 @@ def update_cv_endpoint(
     current_user: UserResponse = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Update an existing CV"""
+    """Update an existing CV (with access control)"""
+    # Check if user can edit this CV
+    access_service = CVAccessControlService(db)
+    access_service.check_cv_edit_permission(str(current_user.id), cv_id)
+    
+    # If we get here, user has permission to edit
     cv = update_cv(
         db=db,
         cv_id=cv_id,
@@ -205,3 +212,44 @@ def preview_cv_pdf(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to generate PDF preview. Please check your CV content and try again."
         )
+
+# Legacy endpoint for backward compatibility
+@router.get("/{cv_id}/download")
+def download_cv_pdf_legacy(
+    cv_id: str,
+    current_user: UserResponse = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Download CV as PDF (legacy endpoint)"""
+    cv = get_cv_by_id(db, cv_id, str(current_user.id))
+    if not cv:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="CV not found"
+        )
+    
+    try:
+        pdf_bytes = pdf_service.generate_pdf(cv.markdown_content, cv.settings or {})
+        
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f"attachment; filename={cv.name.replace(' ', '_')}.pdf"
+            }
+        )
+    except Exception as e:
+        logger.error(f"PDF generation failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to generate PDF"
+        )
+
+@router.get("/access-summary")
+def get_cv_access_summary(
+    current_user: UserResponse = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get summary of user's CV access rights"""
+    access_service = CVAccessControlService(db)
+    return access_service.get_cv_access_summary(str(current_user.id))
