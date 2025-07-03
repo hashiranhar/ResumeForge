@@ -205,35 +205,3 @@ def preview_cv_pdf(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to generate PDF preview. Please check your CV content and try again."
         )
-
-# Legacy endpoint for backward compatibility
-@router.get("/{cv_id}/download")
-def download_cv_pdf_legacy(
-    cv_id: str,
-    current_user: UserResponse = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """Download CV as PDF (legacy endpoint)"""
-    cv = get_cv_by_id(db, cv_id, str(current_user.id))
-    if not cv:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="CV not found"
-        )
-    
-    try:
-        pdf_bytes = pdf_service.generate_pdf(cv.markdown_content, cv.settings or {})
-        
-        return Response(
-            content=pdf_bytes,
-            media_type="application/pdf",
-            headers={
-                "Content-Disposition": f"attachment; filename={cv.name.replace(' ', '_')}.pdf"
-            }
-        )
-    except Exception as e:
-        logger.error(f"PDF generation failed: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to generate PDF"
-        )
