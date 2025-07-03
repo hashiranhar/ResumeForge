@@ -8,6 +8,7 @@ from app.schemas.auth import UserResponse
 from app.crud.template import get_all_templates, get_template_by_id
 from app.crud.cv import create_cv
 from app.routers.auth import get_current_user
+from app.services.rate_limiting_service import check_cv_creation_rate_limit
 
 router = APIRouter(prefix="/api/templates", tags=["templates"])
 
@@ -31,6 +32,7 @@ def get_template(template_id: str, db: Session = Depends(get_db)):
 @router.post("/create-cv", response_model=CVResponse)
 def create_cv_from_template(
     template_data: CreateCVFromTemplate,
+    cv_limit_check = Depends(check_cv_creation_rate_limit()),  # CV creation rate limiting added
     current_user: UserResponse = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):

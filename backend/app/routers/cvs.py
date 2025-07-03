@@ -8,6 +8,7 @@ from app.schemas.auth import UserResponse
 from app.crud.cv import get_user_cvs, get_cv_by_id, create_cv, update_cv, delete_cv
 from app.routers.auth import get_current_user
 from app.services.pdf_service import pdf_service
+from app.services.rate_limiting_service import check_cv_creation_rate_limit
 import logging
 
 logger = logging.getLogger(__name__)
@@ -40,6 +41,7 @@ def get_cv(
 @router.post("/", response_model=CVResponse)
 def create_new_cv(
     cv_data: CVCreate,
+    cv_limit_check = Depends(check_cv_creation_rate_limit()),  # CV creation rate limiting added
     current_user: UserResponse = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
