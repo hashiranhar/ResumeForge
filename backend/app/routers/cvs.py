@@ -8,6 +8,7 @@ from app.schemas.auth import UserResponse
 from app.crud.cv import get_user_cvs, get_cv_by_id, create_cv, update_cv, delete_cv
 from app.routers.auth import get_current_user
 from app.services.pdf_service import pdf_service
+from app.services.rate_limiting_service import check_cv_creation_rate_limit
 import logging
 
 logger = logging.getLogger(__name__)
@@ -40,6 +41,7 @@ def get_cv(
 @router.post("/", response_model=CVResponse)
 def create_new_cv(
     cv_data: CVCreate,
+    cv_limit_check = Depends(check_cv_creation_rate_limit()),  # CV creation rate limiting added
     current_user: UserResponse = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -91,14 +93,13 @@ def delete_cv_endpoint(
         )
     return {"message": "CV deleted successfully"}
 
-@router.get("/{cv_id}/pdf")
+@router.get("/{cv_id}/download")
 def download_cv_pdf(
     cv_id: str,
     current_user: UserResponse = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Generate and download CV as PDF"""
-    # Get the CV
+    """Download CV as PDF"""
     cv = get_cv_by_id(db, cv_id, str(current_user.id))
     if not cv:
         raise HTTPException(
@@ -107,99 +108,18 @@ def download_cv_pdf(
         )
     
     try:
-        # Generate PDF
-        pdf_bytes = pdf_service.generate_pdf(
-            markdown_content=cv.markdown_content or "",
-            settings=cv.settings
-        )
+        pdf_bytes = pdf_service.generate_pdf(cv.markdown_content, cv.settings or {})
         
-        # Create filename
-        safe_name = "".join(c for c in cv.name if c.isalnum() or c in (' ', '-', '_')).rstrip()
-        filename = f"{safe_name}.pdf"
-        
-        # Return PDF response
         return Response(
             content=pdf_bytes,
             media_type="application/pdf",
             headers={
-                "Content-Disposition": f"attachment; filename=\"{filename}\"",
-                "Content-Length": str(len(pdf_bytes))
+                "Content-Disposition": f"attachment; filename={cv.name.replace(' ', '_')}.pdf"
             }
         )
-        
     except Exception as e:
-        logger.error(f"PDF generation failed for CV {cv_id}: {str(e)}")
+        logger.error(f"PDF generation failed: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to generate PDF. Please check your CV content and try again."
-        )
-
-@router.get("/{cv_id}/markdown")
-def download_cv_markdown(
-    cv_id: str,
-    current_user: UserResponse = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """Download CV as Markdown file"""
-    # Get the CV
-    cv = get_cv_by_id(db, cv_id, str(current_user.id))
-    if not cv:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="CV not found"
-        )
-    
-    # Create filename
-    safe_name = "".join(c for c in cv.name if c.isalnum() or c in (' ', '-', '_')).rstrip()
-    filename = f"{safe_name}.md"
-    
-    # Return markdown content
-    content = cv.markdown_content or "# Your CV\n\nPlease add your CV content here."
-    
-    return Response(
-        content=content,
-        media_type="text/markdown",
-        headers={
-            "Content-Disposition": f"attachment; filename=\"{filename}\"",
-            "Content-Length": str(len(content.encode('utf-8')))
-        }
-    )
-
-@router.get("/{cv_id}/preview-pdf")
-def preview_cv_pdf(
-    cv_id: str,
-    current_user: UserResponse = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """Preview CV as PDF (inline display)"""
-    # Get the CV
-    cv = get_cv_by_id(db, cv_id, str(current_user.id))
-    if not cv:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="CV not found"
-        )
-    
-    try:
-        # Generate PDF
-        pdf_bytes = pdf_service.generate_pdf(
-            markdown_content=cv.markdown_content or "",
-            settings=cv.settings
-        )
-        
-        # Return PDF for inline viewing
-        return Response(
-            content=pdf_bytes,
-            media_type="application/pdf",
-            headers={
-                "Content-Disposition": "inline",
-                "Content-Length": str(len(pdf_bytes))
-            }
-        )
-        
-    except Exception as e:
-        logger.error(f"PDF preview failed for CV {cv_id}: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to generate PDF preview. Please check your CV content and try again."
+            detail="Failed to generate PDF"
         )

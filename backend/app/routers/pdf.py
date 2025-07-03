@@ -7,6 +7,7 @@ from app.schemas.auth import UserResponse
 from app.routers.auth import get_current_user
 from app.services.pdf_service import pdf_service
 from app.services.llm_service import llm_service
+from app.services.rate_limiting_service import check_api_rate_limit, check_cv_creation_rate_limit
 import logging
 
 logger = logging.getLogger(__name__)
@@ -17,6 +18,9 @@ async def create_cv_from_pdf(
     file: UploadFile = File(...),
     cv_name: str = Form(...),
     preferences: Optional[str] = Form(None),
+    # Both rate limits needed: API for PDF processing AND CV creation for new CV
+    api_rate_limit_check = Depends(check_api_rate_limit("pdf_processing")),
+    cv_limit_check = Depends(check_cv_creation_rate_limit()),
     current_user: UserResponse = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
