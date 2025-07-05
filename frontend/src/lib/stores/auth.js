@@ -204,3 +204,45 @@ export const authService = {
         }
     }
 };
+
+// Authenticated fetch helper
+export async function authenticatedFetch(url, options = {}) {
+    let currentToken;
+    
+    // Get current token value
+    token.subscribe(value => {
+        currentToken = value;
+    })();
+    
+    // If no token and we're in browser, try to get from localStorage
+    if (!currentToken && browser) {
+        currentToken = localStorage.getItem('resumeforge_token');
+    }
+    
+    if (!currentToken) {
+        throw new Error('No authentication token available');
+    }
+    
+    // Add authorization header
+    const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${currentToken}`,
+        ...options.headers
+    };
+    
+    const response = await fetch(url, {
+        ...options,
+        headers
+    });
+    
+    // If unauthorized, clear auth state and redirect to login
+    if (response.status === 401) {
+        authService.logout();
+        if (browser) {
+            window.location.href = '/auth/login';
+        }
+        throw new Error('Authentication failed');
+    }
+    
+    return response;
+}

@@ -3,14 +3,46 @@ from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, 
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.schemas.auth import UserRegister, UserLogin, Token, UserResponse, ForgotPasswordRequest, ResetPasswordRequest
+from app.schemas.auth import UserRegister, UserLogin, Token, UserResponse, ForgotPasswordRequest, ResetPasswordRequest, EmailVerificationRequest, ResendVerificationRequest
 from app.crud.user import create_user, authenticate_user, get_user_by_email, get_user_by_id, update_last_login
 from app.core.auth import get_current_user
 from app.core.security import create_access_token, verify_token, get_password_hash
 from app.core.config import settings
 from app.services.email import send_reset_email
+from app.services.email_verification import email_verification_service
+
 
 router = APIRouter(prefix="/api/auth", tags=["authentication"])
+
+@router.post("/verify-email")
+def verify_email(request: EmailVerificationRequest, db: Session = Depends(get_db)):
+    """Verify user email with verification code"""
+    result = email_verification_service.verify_code(
+        db, request.email, request.verification_code
+    )
+    
+    if not result["success"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=result["error"]
+        )
+    
+    return result
+
+@router.post("/resend-verification")
+def resend_verification(request: ResendVerificationRequest, db: Session = Depends(get_db)):
+    """Resend verification code to user email"""
+    result = email_verification_service.resend_verification_code(
+        db, request.email
+    )
+    
+    if not result["success"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=result["error"]
+        )
+    
+    return result
 
 @router.post("/register", response_model=UserResponse)
 def register(user_data: UserRegister, db: Session = Depends(get_db)):
@@ -24,6 +56,11 @@ def register(user_data: UserRegister, db: Session = Depends(get_db)):
     
     # Create new user
     user = create_user(db, user_data.email, user_data.password)
+    
+    # Send verification email
+    verification_code = email_verification_service.create_verification_code(db, user)
+    email_verification_service.send_verification_email(user.email, verification_code)
+    
     return user
 
 @router.post("/login", response_model=Token)
