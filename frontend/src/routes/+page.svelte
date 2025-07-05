@@ -300,7 +300,11 @@
         <div class="max-w-6xl mx-auto px-6 lg:px-8">
             <div class="flex flex-col md:flex-row justify-between items-center">
                 <div class="flex items-center space-x-3 mb-4 md:mb-0">
-                    <FileText class="h-6 w-6 text-primary-600 dark:text-primary-400" />
+                    <img 
+                        src="/logo.png" 
+                        alt="ResumeForge Logo" 
+                        class="h-16 w-16 object-contain"
+                    />
                     <span class="font-semibold text-gray-900 dark:text-white">ResumeForge</span>
                 </div>
                 
@@ -312,7 +316,7 @@
             </div>
             
             <div class="mt-8 pt-8 border-t border-gray-200 dark:border-gray-800 text-center text-gray-500 dark:text-gray-400 text-sm">
-                © 2024 ResumeForge. All rights reserved.
+                © 2025 ResumeForge. All rights reserved.
             </div>
         </div>
     </footer>
