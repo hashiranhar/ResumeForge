@@ -5,7 +5,7 @@ class Settings(BaseSettings):
     secret_key: str
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
-    password_reset_token_expire_minutes: int = 60
+    password_reset_token_expire_minutes: int = 15
     environment: str = "development"
     
     huggingface_api_key: str
