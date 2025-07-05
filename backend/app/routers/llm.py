@@ -7,6 +7,7 @@ from app.schemas.auth import UserResponse
 from app.crud.cv import get_cv_by_id, update_cv
 from app.routers.auth import get_current_user
 from app.services.llm_service import llm_service
+from app.services.rate_limiting_service import check_api_rate_limit
 import logging
 
 logger = logging.getLogger(__name__)
@@ -15,6 +16,7 @@ router = APIRouter(prefix="/api/llm", tags=["llm"])
 @router.post("/chat", response_model=ChatResponse)
 def chat_about_cv(
     request: ChatRequest,
+    rate_limit_check = Depends(check_api_rate_limit("chat")),  # Rate limiting added
     current_user: UserResponse = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -67,6 +69,7 @@ def chat_about_cv(
 @router.post("/inline-edit", response_model=InlineEditResponse)
 def inline_edit_cv(
     request: InlineEditRequest,
+    rate_limit_check = Depends(check_api_rate_limit("suggestion")),  # Rate limiting added
     current_user: UserResponse = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -125,6 +128,7 @@ def inline_edit_cv(
 @router.post("/ats-score", response_model=ATSAnalysisResponse)
 def get_ats_score(
     request: ATSAnalysisRequest,
+    rate_limit_check = Depends(check_api_rate_limit("ats_analysis")),  # Rate limiting added
     current_user: UserResponse = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):

@@ -15,3 +15,8 @@ class User(Base):
     
     # Relationship to CVs
     cvs = relationship("CV", back_populates="user", cascade="all, delete-orphan")
+
+    # Relationship to subscriptions, api usage, and payment history
+    subscription = relationship("UserSubscription", back_populates="user", uselist=False) 
+    api_usage = relationship("ApiUsage", back_populates="user", cascade="all, delete-orphan")
+    payment_history = relationship("PaymentHistory", back_populates="user", cascade="all, delete-orphan")
