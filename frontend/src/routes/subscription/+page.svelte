@@ -78,6 +78,24 @@
         }
     }
 
+    async function handleManageSubscription() {
+        try {
+            const response = await authenticatedFetch("/api/subscription/customer-portal", {
+                method: "POST",
+            });
+            if (!response.ok) {
+                addToast("Failed to open customer portal", "error");
+                return;
+            }
+            const data = await response.json();
+            if (data.portal_url) {
+                window.location.href = data.portal_url;
+            }
+        } catch (err) {
+            addToast("Failed to open customer portal", "error");
+        }
+    }
+
     // Get subscription status info
     $: subscriptionStatus = getSubscriptionStatus($currentSubscription);
 

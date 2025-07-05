@@ -341,7 +341,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     elif event["type"] == "customer.subscription.deleted":
         # TODO: Mark subscription as canceled in your DB
         pass
-    # Add more event types as needed
+    # Add more event types if needed
 
     return {"status": "success"}
 
