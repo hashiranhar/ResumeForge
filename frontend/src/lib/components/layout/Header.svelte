@@ -57,17 +57,6 @@
                         Dashboard
                     </a>
 
-                    <!-- New CV Button -->
-                    <Button
-                        variant="primary"
-                        size="sm"
-                        on:click={handleNewCV}
-                        class="flex items-center space-x-1"
-                    >
-                        <Plus class="h-4 w-4" />
-                        <span class="hidden sm:inline">New CV</span>
-                    </Button>
-
                     <!-- Dark Mode Toggle -->
                     <DarkModeToggle />
 
