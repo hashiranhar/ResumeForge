@@ -13,6 +13,10 @@ class Settings(BaseSettings):
     llm_max_tokens: int = 2000
     llm_temperature: float = 0.7
     
+    # Email Configuration
+    godaddy_email: str 
+    godaddy_password: str 
+    
     class Config:
         env_file = "../.env"
 

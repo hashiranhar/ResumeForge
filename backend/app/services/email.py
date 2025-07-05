@@ -1,5 +1,6 @@
 import smtplib
 from fastapi import HTTPException
+from app.core.config import settings
 
 def send_reset_email(email: str, reset_link: str):
     """Send password reset email to user"""
@@ -9,10 +10,10 @@ def send_reset_email(email: str, reset_link: str):
 
     # EXAMPLE using SMTP, replace with actual SMTP email stuff
     try:
-        with smtplib.SMTP("smtp.example.com", 587) as server:
+        with smtplib.SMTP("smtp.office365.com", 587) as server:
             server.starttls()
-            server.login("your@email.com", "yourpassword")
-            server.sendmail("your@email.com", email, message)
+            server.login(settings.godaddy_email, settings.godaddy_password)
+            server.sendmail(settings.godaddy_email, email, message)
     except Exception as e:
         print(f"Failed to send email: {e}")
         raise HTTPException(status_code=500, detail="Failed to send reset email")

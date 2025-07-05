@@ -90,6 +90,6 @@ async def reset_password(request: ResetPasswordRequest, db: Session = Depends(ge
         raise HTTPException(status_code=404, detail="User not found")
 
     # Update password
-    user.hashed_password = get_password_hash(request.new_password)
+    user.password_hash = get_password_hash(request.new_password)
     db.commit()
     return {"message": "Password reset successful"}
