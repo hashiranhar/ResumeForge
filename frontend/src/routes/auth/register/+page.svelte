@@ -64,13 +64,22 @@
         errors.general = '';
 
         try {
-            const result = await authService.register(email, password);
-            
-            if (result.success) {
-                addToast('Account created successfully! Welcome to ResumeForge!', 'success');
-                goto('/dashboard');
+            // Register user without auto-login
+            const response = await fetch('/api/auth/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ email, password })
+            });
+
+            if (response.ok) {
+                addToast('Account created successfully! Please check your email for verification code.', 'success');
+                // Redirect to email verification page with email parameter
+                goto(`/auth/verify-email?email=${encodeURIComponent(email)}`);
             } else {
-                errors.general = result.error || 'Registration failed';
+                const error = await response.json();
+                errors.general = error.detail || 'Registration failed';
             }
         } catch (error) {
             errors.general = 'An unexpected error occurred';
@@ -90,10 +99,9 @@
     <title>Sign Up - ResumeForge</title>
 </svelte:head>
 
-<!-- FIXED: Added dark mode styling -->
 <div class="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-black py-12 px-4 sm:px-6 lg:px-8">
     <div class="max-w-md w-full space-y-8">
-        <!-- Header - FIXED: Added dark mode styling -->
+        <!-- Header -->
         <div class="text-center">
             <div class="flex justify-center">
                 <FileText class="h-12 w-12 text-primary-600 dark:text-primary-400" />
@@ -109,7 +117,7 @@
             </p>
         </div>
 
-        <!-- Form - FIXED: Added dark mode styling -->
+        <!-- Form -->
         <form class="mt-8 space-y-6" on:submit|preventDefault={handleSubmit}>
             {#if errors.general}
                 <div class="bg-red-50 dark:bg-red-900 border border-red-200 dark:border-red-700 rounded-lg p-4">
@@ -152,51 +160,30 @@
                 />
             </div>
 
-            <!-- Terms text - FIXED: Added dark mode styling -->
-            <div class="text-sm text-gray-600 dark:text-gray-300">
-                By creating an account, you agree to our 
-                <a href="/terms" class="text-primary-600 dark:text-primary-400 hover:text-primary-500 dark:hover:text-primary-300">Terms of Service</a>
-                and 
-                <a href="/privacy" class="text-primary-600 dark:text-primary-400 hover:text-primary-500 dark:hover:text-primary-300">Privacy Policy</a>.
-            </div>
-
-            <Button 
-                type="submit" 
-                size="lg" 
-                variant="primary" 
-                {loading}
-                disabled={loading}
-                class="w-full"
-            >
-                {#if loading}
-                    Creating account...
-                {:else}
-                    Create account
-                {/if}
-            </Button>
-        </form>
-
-        <!-- Demo option - FIXED: Added dark mode styling -->
-        <div class="mt-6">
-            <div class="relative">
-                <div class="absolute inset-0 flex items-center">
-                    <div class="w-full border-t border-gray-300 dark:border-gray-600" />
-                </div>
-                <div class="relative flex justify-center text-sm">
-                    <span class="px-2 bg-gray-50 dark:bg-black text-gray-500 dark:text-gray-400">Or</span>
-                </div>
-            </div>
-
-            <div class="mt-6">
-                <Button 
-                    variant="outline" 
-                    size="lg" 
-                    href="/editor?demo=true"
+            <div>
+                <Button
+                    type="submit"
+                    variant="primary"
+                    size="lg"
+                    {loading}
+                    disabled={loading}
                     class="w-full"
                 >
-                    Try Demo (No Account Required)
+                    {#if loading}
+                        Creating Account...
+                    {:else}
+                        Create Account
+                    {/if}
                 </Button>
             </div>
-        </div>
+
+            <!-- Email Verification Notice -->
+            <div class="mt-4 p-4 bg-blue-50 dark:bg-blue-900 border border-blue-200 dark:border-blue-700 rounded-lg">
+                <p class="text-sm text-blue-800 dark:text-blue-200">
+                    📧 <strong>Email Verification Required:</strong><br>
+                    After creating your account, you'll need to verify your email address before you can log in. We'll send you a verification code to complete the process.
+                </p>
+            </div>
+        </form>
     </div>
 </div>

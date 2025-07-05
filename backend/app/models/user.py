@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, DateTime, func
+from sqlalchemy import Column, String, DateTime, Boolean, Integer, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 import uuid
@@ -12,6 +12,12 @@ class User(Base):
     password_hash = Column(String(255), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     last_login = Column(DateTime(timezone=True), nullable=True)
+    
+    # Email verification fields
+    email_verified = Column(Boolean, nullable=False, default=False)
+    verification_code = Column(String(6), nullable=True)
+    verification_code_expires = Column(DateTime, nullable=True)
+    verification_attempts = Column(Integer, nullable=False, default=0)
     
     # Relationship to CVs
     cvs = relationship("CV", back_populates="user", cascade="all, delete-orphan")

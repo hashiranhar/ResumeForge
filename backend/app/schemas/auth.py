@@ -23,6 +23,7 @@ class UserResponse(BaseModel):
     email: str
     created_at: datetime
     last_login: Optional[datetime] = None
+    email_verified: bool = False
     
     class Config:
         from_attributes = True
@@ -33,3 +34,16 @@ class ForgotPasswordRequest(BaseModel):
 class ResetPasswordRequest(BaseModel):
     token: str
     new_password: str
+
+# Email verification schemas
+class EmailVerificationRequest(BaseModel):
+    email: EmailStr
+    verification_code: str
+
+class ResendVerificationRequest(BaseModel):
+    email: EmailStr
+
+class VerificationResponse(BaseModel):
+    success: bool
+    message: str
+    error: Optional[str] = None

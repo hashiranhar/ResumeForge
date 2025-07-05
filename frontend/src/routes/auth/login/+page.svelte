@@ -6,11 +6,12 @@
     import { isValidEmail } from '$lib/utils/helpers.js';
     import Button from '$lib/components/common/Button.svelte';
     import Input from '$lib/components/common/Input.svelte';
-    import { FileText, Mail, Lock } from 'lucide-svelte';
+    import { FileText, Mail, Lock, AlertCircle } from 'lucide-svelte';
 
     let email = '';
     let password = '';
     let loading = false;
+    let showVerificationPrompt = false;
     let errors = {
         email: '',
         password: '',
@@ -49,6 +50,7 @@
 
         loading = true;
         errors.general = '';
+        showVerificationPrompt = false;
 
         try {
             const result = await authService.login(email, password);
@@ -56,6 +58,9 @@
             if (result.success) {
                 addToast('Welcome back!', 'success');
                 goto('/dashboard');
+            } else if (result.requiresVerification) {
+                showVerificationPrompt = true;
+                errors.general = result.error;
             } else {
                 errors.general = result.error || 'Login failed';
             }
@@ -71,16 +76,19 @@
             handleSubmit();
         }
     }
+
+    function goToVerification() {
+        goto(`/auth/verify-email?email=${encodeURIComponent(email)}`);
+    }
 </script>
 
 <svelte:head>
     <title>Sign In - ResumeForge</title>
 </svelte:head>
 
-<!-- FIXED: Added dark mode styling -->
 <div class="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-black py-12 px-4 sm:px-6 lg:px-8">
     <div class="max-w-md w-full space-y-8">
-        <!-- Header - FIXED: Added dark mode styling -->
+        <!-- Header -->
         <div class="text-center">
             <div class="flex justify-center">
                 <FileText class="h-12 w-12 text-primary-600 dark:text-primary-400" />
@@ -96,40 +104,76 @@
             </p>
         </div>
 
-        <!-- Form - FIXED: Added dark mode styling -->
+        <!-- Form -->
         <form class="mt-8 space-y-6" on:submit|preventDefault={handleSubmit}>
-            {#if errors.general}
+            <!-- General Error -->
+            {#if errors.general && !showVerificationPrompt}
                 <div class="bg-red-50 dark:bg-red-900 border border-red-200 dark:border-red-700 rounded-lg p-4">
-                    <p class="text-sm text-red-600 dark:text-red-300">{errors.general}</p>
+                    <div class="flex">
+                        <AlertCircle class="h-5 w-5 text-red-400 dark:text-red-300" />
+                        <p class="ml-3 text-sm text-red-600 dark:text-red-300">{errors.general}</p>
+                    </div>
+                </div>
+            {/if}
+
+            <!-- Email Verification Prompt -->
+            {#if showVerificationPrompt}
+                <div class="bg-yellow-50 dark:bg-yellow-900 border border-yellow-200 dark:border-yellow-700 rounded-lg p-4">
+                    <div class="flex">
+                        <Mail class="h-5 w-5 text-yellow-400 dark:text-yellow-300" />
+                        <div class="ml-3">
+                            <h3 class="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                                Email Verification Required
+                            </h3>
+                            <p class="mt-2 text-sm text-yellow-700 dark:text-yellow-300">
+                                {errors.general}
+                            </p>
+                            <div class="mt-4">
+                                <Button
+                                    type="button"
+                                    variant="secondary"
+                                    size="sm"
+                                    on:click={goToVerification}
+                                >
+                                    Verify Email Now
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             {/if}
 
             <div class="space-y-4">
-                <Input
-                    id="email"
-                    type="email"
-                    label="Email address"
-                    placeholder="Enter your email"
-                    bind:value={email}
-                    error={errors.email}
-                    required
-                    on:keydown={handleKeydown}
-                />
+                <div>
+                    <Input
+                        id="email"
+                        type="email"
+                        label="Email address"
+                        placeholder="Enter your email"
+                        bind:value={email}
+                        error={errors.email}
+                        required
+                        on:keydown={handleKeydown}
+                        icon={Mail}
+                    />
+                </div>
 
-                <Input
-                    id="password"
-                    type="password"
-                    label="Password"
-                    placeholder="Enter your password"
-                    bind:value={password}
-                    error={errors.password}
-                    required
-                    on:keydown={handleKeydown}
-                />
+                <div>
+                    <Input
+                        id="password"
+                        type="password"
+                        label="Password"
+                        placeholder="Enter your password"
+                        bind:value={password}
+                        error={errors.password}
+                        required
+                        on:keydown={handleKeydown}
+                        icon={Lock}
+                    />
+                </div>
             </div>
 
-            <!-- FIXED: Added dark mode styling -->
-            <div class="flex items-center justify-center">
+            <div class="flex items-center justify-between">
                 <div class="text-sm">
                     <a href="/auth/forgot-password" class="font-medium text-primary-600 dark:text-primary-400 hover:text-primary-500 dark:hover:text-primary-300">
                         Forgot your password?
@@ -137,14 +181,14 @@
                 </div>
             </div>
 
-            <!-- Centered sign in button -->
-            <div class="flex justify-center">
-                <Button 
-                    type="submit" 
-                    size="lg" 
-                    variant="primary" 
+            <div>
+                <Button
+                    type="submit"
+                    variant="primary"
+                    size="lg"
                     {loading}
                     disabled={loading}
+                    class="w-full"
                 >
                     {#if loading}
                         Signing in...
@@ -155,27 +199,11 @@
             </div>
         </form>
 
-        <!-- Demo option -->
-        <div class="mt-6">
-            <div class="relative">
-                <div class="absolute inset-0 flex items-center">
-                    <div class="w-full border-t border-gray-300 dark:border-gray-600" />
-                </div>
-                <div class="relative flex justify-center text-sm">
-                    <span class="px-2 bg-gray-50 dark:bg-black text-gray-500 dark:text-gray-400">Or</span>
-                </div>
-            </div>
-
-            <!-- Added flex container for centering -->
-            <div class="mt-6 flex justify-center">
-                <Button 
-                    variant="outline" 
-                    size="lg" 
-                    href="/editor?demo=true"
-                >
-                    Try Demo (No Account Required)
-                </Button>
-            </div>
+        <!-- Additional Help -->
+        <div class="mt-6 text-center">
+            <p class="text-xs text-gray-500 dark:text-gray-400">
+                Having trouble? Make sure your email is verified before signing in.
+            </p>
         </div>
     </div>
 </div>

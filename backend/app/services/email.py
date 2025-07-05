@@ -13,12 +13,12 @@ def send_reset_email(email: str, reset_link: str):
     """Send password reset email to user"""
     
     # GoDaddy SMTP configuration
-    smtp_server = "smtp.office365.com"
-    smtp_port = 587  # or 465 for SSL
+    smtp_server = f"{settings.smtp_server}"
+    smtp_port = settings.smtp_port  
     
     # Your GoDaddy email credentials
-    sender_email = settings.godaddy_email
-    sender_password = settings.godaddy_password
+    sender_email = settings.sender_email
+    sender_password = settings.sender_password
     
     # Create message
     message = MIMEMultipart("alternative")

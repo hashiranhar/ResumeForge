@@ -1,10 +1,10 @@
 import { writable } from 'svelte/store';
 import { browser } from '$app/environment';
 
-// Auth state
+// Auth stores
+export const isAuthenticated = writable(false);
 export const user = writable(null);
 export const token = writable(null);
-export const isAuthenticated = writable(false);
 
 // Initialize auth state from localStorage
 if (browser) {
@@ -16,15 +16,14 @@ if (browser) {
             token.set(storedToken);
             user.set(JSON.parse(storedUser));
             isAuthenticated.set(true);
-        } catch (e) {
-            // Clear invalid data
+        } catch (error) {
+            // Clear invalid stored data
             localStorage.removeItem('resumeforge_token');
             localStorage.removeItem('resumeforge_user');
         }
     }
 }
 
-// Auth functions
 export const authService = {
     async login(email, password) {
         try {
@@ -39,11 +38,20 @@ export const authService = {
 
             if (!response.ok) {
                 const error = await response.json();
+                if (response.status === 403) {
+                    // Email not verified
+                    return { 
+                        success: false, 
+                        error: error.detail,
+                        requiresVerification: true,
+                        email: email
+                    };
+                }
                 throw new Error(error.detail || 'Login failed');
             }
 
             const data = await response.json();
-            
+
             // Get user info
             const userResponse = await fetch('/api/auth/me', {
                 headers: {
@@ -88,10 +96,68 @@ export const authService = {
                 throw new Error(error.detail || 'Registration failed');
             }
 
-            // Auto-login after registration
-            return await this.login(email, password);
+            // Registration successful - user needs to verify email
+            return { 
+                success: true, 
+                message: 'Registration successful. Please verify your email.',
+                requiresVerification: true,
+                email: email
+            };
         } catch (error) {
             return { success: false, error: error.message };
+        }
+    },
+
+    async verifyEmail(email, verificationCode) {
+        try {
+            const response = await fetch('/api/auth/verify-email', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ 
+                    email, 
+                    verification_code: verificationCode 
+                })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                return { 
+                    success: false, 
+                    error: data.error || 'Verification failed' 
+                };
+            }
+
+            return { success: true, message: data.message };
+        } catch (error) {
+            return { success: false, error: 'Verification failed' };
+        }
+    },
+
+    async resendVerificationCode(email) {
+        try {
+            const response = await fetch('/api/auth/resend-verification', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ email })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                return { 
+                    success: false, 
+                    error: data.error || 'Failed to resend verification code' 
+                };
+            }
+
+            return { success: true, message: data.message };
+        } catch (error) {
+            return { success: false, error: 'Failed to resend verification code' };
         }
     },
 
@@ -106,64 +172,35 @@ export const authService = {
         }
     },
 
-    async checkAuth() {
-        const currentToken = getTokenValue();
-        if (!currentToken) return false;
-
+    async refreshUserData() {
         try {
+            const currentToken = browser ? localStorage.getItem('resumeforge_token') : null;
+            if (!currentToken) {
+                return { success: false, error: 'No token found' };
+            }
+
             const response = await fetch('/api/auth/me', {
                 headers: {
                     'Authorization': `Bearer ${currentToken}`
                 }
             });
 
-            if (response.ok) {
-                const userData = await response.json();
-                user.set(userData);
-                isAuthenticated.set(true);
-                return true;
-            } else {
+            if (!response.ok) {
+                // Token might be invalid, logout user
                 this.logout();
-                return false;
+                return { success: false, error: 'Session expired' };
             }
+
+            const userData = await response.json();
+            
+            user.set(userData);
+            if (browser) {
+                localStorage.setItem('resumeforge_user', JSON.stringify(userData));
+            }
+
+            return { success: true, user: userData };
         } catch (error) {
-            this.logout();
-            return false;
+            return { success: false, error: error.message };
         }
     }
 };
-
-// Helper to get current token value
-export function getTokenValue() {
-    let currentToken;
-    token.subscribe(value => currentToken = value)();
-    return currentToken;
-}
-
-// Helper to make authenticated requests
-export async function authenticatedFetch(url, options = {}) {
-    const currentToken = getTokenValue();
-    
-    if (!currentToken) {
-        throw new Error('No authentication token');
-    }
-
-    const headers = {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${currentToken}`,
-        ...options.headers
-    };
-
-    const response = await fetch(url, {
-        ...options,
-        headers
-    });
-
-    if (response.status === 401) {
-        // Token expired or invalid
-        authService.logout();
-        throw new Error('Authentication expired');
-    }
-
-    return response;
-}

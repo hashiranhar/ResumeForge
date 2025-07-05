@@ -14,8 +14,10 @@ class Settings(BaseSettings):
     llm_temperature: float = 0.7
     
     # Email Configuration
-    godaddy_email: str 
-    godaddy_password: str 
+    smtp_server: str 
+    smtp_port: str 
+    sender_email: str
+    sender_password: str
     
     class Config:
         env_file = "../.env"
