@@ -1,12 +1,14 @@
-<script lang="ts">
+<script>
     import { createEventDispatcher } from 'svelte';
     import { fade } from 'svelte/transition';
     import { X } from 'lucide-svelte';
 
-    export let open: boolean = false; // Control modal visibility
-    export let title: string = ''; // Modal title
-    export let size: 'sm' | 'md' | 'lg' | 'xl' = 'md'; // Modal size
-    export let close: () => void; // Close function passed from parent
+    export let open = false; // Control modal visibility
+    export let title = ''; // Modal title
+    export let size = 'md'; // Modal size: 'sm' | 'md' | 'lg' | 'xl'
+    export let close = () => {}; // Close function - now with default
+
+    const dispatch = createEventDispatcher();
 
     const sizes = {
         sm: 'max-w-md',
@@ -15,22 +17,29 @@
         xl: 'max-w-4xl'
     };
 
-    function handleBackdropClick(event: MouseEvent) {
-        if (event.target === event.currentTarget) {
+    function handleClose() {
+        if (close) {
             close();
+        }
+        dispatch('close');
+    }
+
+    function handleBackdropClick(event) {
+        if (event.target === event.currentTarget) {
+            handleClose();
         }
     }
 
-    function handleBackdropKeydown(event: KeyboardEvent) {
+    function handleBackdropKeydown(event) {
         if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault();
-            close();
+            handleClose();
         }
     }
 
-    function handleKeydown(event: KeyboardEvent) {
+    function handleKeydown(event) {
         if (event.key === 'Escape' && open) {
-            close();
+            handleClose();
         }
     }
 </script>
@@ -47,7 +56,7 @@
         aria-describedby="modal-content"
     >
         <div class="flex min-h-screen items-center justify-center p-4">
-            <!-- Backdrop - FIXED: Added dark mode styling -->
+            <!-- Backdrop -->
             <div 
                 class="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-75 transition-opacity"
                 role="button"
@@ -57,7 +66,7 @@
                 on:keydown={handleBackdropKeydown}
             ></div>
             
-            <!-- Modal - FIXED: Added dark mode styling -->
+            <!-- Modal -->
             <div 
                 class="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full {sizes[size]} border border-gray-200 dark:border-gray-700"
                 id="modal-content"
@@ -75,11 +84,11 @@
                             {/if}
                         </div>
                         
-                        <!-- Close button - FIXED: Added dark mode styling -->
+                        <!-- Close button -->
                         <button
                             type="button"
                             class="ml-4 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition-colors"
-                            on:click={close}
+                            on:click={handleClose}
                             aria-label="Close modal"
                         >
                             <X class="h-6 w-6" />
@@ -87,12 +96,12 @@
                     </div>
                 {/if}
 
-                <!-- Content - FIXED: Added dark mode styling -->
+                <!-- Content -->
                 <div class="p-6">
                     <slot />
                 </div>
 
-                <!-- Footer - FIXED: Added dark mode styling -->
+                <!-- Footer -->
                 {#if $$slots.footer}
                     <div class="flex items-center justify-end space-x-2 p-6 pt-0 border-t border-gray-200 dark:border-gray-700">
                         <slot name="footer" />

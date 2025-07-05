@@ -15,6 +15,8 @@
 
     // Configure marked for better formatting
     marked.setOptions({
+        mangle: false,        // Disable deprecated mangle
+        headerIds: false,     // Disable deprecated headerIds  
         breaks: true,
         gfm: true
     });

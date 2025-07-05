@@ -13,6 +13,14 @@
     let zoomLevel = 100;
     let isLoading = false;
 
+    marked.setOptions({
+        mangle: false,        // Disable deprecated mangle
+        headerIds: false,     // Disable deprecated headerIds
+        breaks: true,
+        gfm: true,
+        silent: true
+    });
+
     // Debounced preview update
     const updatePreview = debounce(async () => {
         await generatePreview();
@@ -205,13 +213,24 @@
             }
 
             .cv-content ul, .cv-content ol {
-                margin: 4pt 0;
-                padding-left: 16pt;
-            }
+            margin: 4pt 0;
+            padding-left: 16pt;
+        }
 
-            .cv-content li {
-                margin: 2pt 0;
-            }
+        .cv-content ul {
+            list-style-type: disc;
+            list-style-position: outside;
+        }
+
+        .cv-content ol {
+            list-style-type: decimal;
+            list-style-position: outside;
+        }
+
+        .cv-content li {
+            margin: 2pt 0;
+            display: list-item;
+        }
 
             .center-text {
                 text-align: center;
